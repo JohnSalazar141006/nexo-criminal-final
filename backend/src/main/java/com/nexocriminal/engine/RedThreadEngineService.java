@@ -21,6 +21,7 @@ public class RedThreadEngineService {
     private final ReglaEscoltaVehicular reglaEscolta;
     private final ReglaCirculoConfianza reglaCirculo;
     private final ReglaSimilitudModusOperandi reglaModus;
+    private final ReglaClusterDesapariciones reglaClusterDesapariciones;
 
     @Transactional
     public List<ReglaVinculo.ResultadoRegla> ejecutarTodas() {
@@ -30,6 +31,7 @@ public class RedThreadEngineService {
         resultados.add(reglaEscolta.ejecutar());
         resultados.add(reglaCirculo.ejecutar());
         resultados.add(reglaModus.ejecutar());
+        resultados.add(reglaClusterDesapariciones.ejecutar());
         log.info("=== RED THREAD ENGINE COMPLETADO ===");
         return resultados;
     }
@@ -52,5 +54,10 @@ public class RedThreadEngineService {
     @Transactional
     public ReglaVinculo.ResultadoRegla ejecutarModusOperandi() {
         return reglaModus.ejecutar();
+    }
+
+    @Transactional
+    public ReglaVinculo.ResultadoRegla ejecutarClusterDesapariciones() {
+        return reglaClusterDesapariciones.ejecutar();
     }
 }

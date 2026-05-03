@@ -4,7 +4,7 @@ import { authService } from '../services/api';
 import { useAuth } from '../services/AuthContext';
 
 export default function Login() {
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('admin2');
   const [password, setPassword] = useState('admin123');
   const [err, setErr] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -20,7 +20,7 @@ export default function Login() {
       login(sesion);
       nav('/');
     } catch {
-      setErr('Credenciales inválidas. Prueba con admin / admin123.');
+      setErr('Credenciales inválidas. Verificá usuario y contraseña.');
     } finally {
       setCargando(false);
     }
@@ -29,28 +29,58 @@ export default function Login() {
   return (
     <div className="login-page">
       <form className="login-box" onSubmit={onSubmit}>
-        <h1>🧵 Nexo Criminal</h1>
-        <p>Sistema de Inteligencia de Vínculos — The Red Thread</p>
-
-        <div className="form-group">
-          <label>Usuario</label>
-          <input value={username} onChange={e => setUsername(e.target.value)} autoFocus />
+        <div className="login-header">
+          <div className="login-logo">
+            <span className="material-symbols-outlined">security</span>
+          </div>
+          <div>
+            <div className="login-title">Nexo Criminal</div>
+            <div className="login-subtitle">Precision Intelligence</div>
+          </div>
         </div>
 
-        <div className="form-group">
-          <label>Contraseña</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        <p className="login-desc">
+          Acceso restringido. Autenticación requerida para ingresar al sistema
+          de inteligencia de vínculos.
+        </p>
+
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label className="form-label">Agent ID</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoFocus
+            placeholder="admin2"
+          />
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label className="form-label">Access Key</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
         </div>
 
         {err && <div className="error">{err}</div>}
 
-        <button type="submit" style={{ width: '100%', marginTop: '0.5rem' }} disabled={cargando}>
-          {cargando ? 'Ingresando...' : 'Iniciar sesión'}
+        <button
+          type="submit"
+          className="btn-primary"
+          style={{ width: '100%', marginTop: 10 }}
+          disabled={cargando}
+        >
+          {cargando ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
+            arrow_forward
+          </span>
         </button>
 
-        <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', textAlign: 'center' }}>
-          Usuario por defecto: <strong>admin</strong> / <strong>admin123</strong>
-        </p>
+        <div className="login-hint">
+          DEMO ACCESS: <strong>admin2</strong> / <strong>admin123</strong>
+        </div>
       </form>
     </div>
   );

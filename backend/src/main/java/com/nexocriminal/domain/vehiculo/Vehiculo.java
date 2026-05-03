@@ -1,5 +1,6 @@
 package com.nexocriminal.domain.vehiculo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.nexocriminal.domain.persona.Persona;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @Table(name = "vehiculo")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Vehiculo {
 
     @Id
@@ -18,29 +20,31 @@ public class Vehiculo {
     private Long id;
 
     @NotBlank
-    @Column(unique = true, nullable = false, length = 10)
+    @Column(unique = true, nullable = false, length = 20)
     private String placa;
 
     @NotBlank
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 80)
     private String marca;
 
     @NotBlank
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 80)
     private String modelo;
 
+    @Column(name = "anio")
     private Integer anio;
 
-    @Column(length = 30)
+    @Column(length = 40)
     private String color;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 30)
+    @Column(nullable = false, length = 30)
     @Builder.Default
     private EstadoVehiculo estado = EstadoVehiculo.NORMAL;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "propietario_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Persona propietario;
 
     @Column(name = "creado_en", updatable = false)

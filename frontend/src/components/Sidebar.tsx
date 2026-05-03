@@ -1,34 +1,86 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/AuthContext';
+import { usePrefs } from '../services/PrefsContext';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { t } = usePrefs();
+  const nav = useNavigate();
 
-  const link = ({ isActive }: { isActive: boolean }) => (isActive ? 'activo' : '');
+  const link = ({ isActive }: { isActive: boolean }) =>
+    isActive ? 'nav-link activo' : 'nav-link';
+
+  const nuevaInvestigacion = () => nav('/sucesos?nueva=1');
 
   return (
     <aside className="sidebar">
-      <h1>🧵 Nexo Criminal</h1>
-      <nav>
-        <NavLink to="/" end className={link}>🏠 Dashboard</NavLink>
-        <NavLink to="/personas" className={link}>👤 Personas</NavLink>
-        <NavLink to="/vehiculos" className={link}>🚗 Vehículos</NavLink>
-        <NavLink to="/ubicaciones" className={link}>📍 Ubicaciones</NavLink>
-        <NavLink to="/sucesos" className={link}>📋 Sucesos</NavLink>
-        <NavLink to="/alertas" className={link}>⚠️ Alertas</NavLink>
-        <NavLink to="/grafo" className={link}>🧵 Grafo (Red Thread)</NavLink>
+      <div className="sidebar-header">
+        <div className="sidebar-logo">
+          <span className="material-symbols-outlined">security</span>
+        </div>
+        <div>
+          <div className="sidebar-title">Nexo Criminal</div>
+          <div className="sidebar-subtitle">{t('Inteligencia de Precisión')}</div>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav">
+        <NavLink to="/" end className={link}>
+          <span className="material-symbols-outlined">dashboard</span>
+          {t('Panel de Control')}
+        </NavLink>
+        <NavLink to="/personas" className={link}>
+          <span className="material-symbols-outlined">group</span>
+          {t('Personas')}
+        </NavLink>
+        <NavLink to="/vehiculos" className={link}>
+          <span className="material-symbols-outlined">directions_car</span>
+          {t('Vehículos')}
+        </NavLink>
+        <NavLink to="/ubicaciones" className={link}>
+          <span className="material-symbols-outlined">distance</span>
+          {t('Ubicaciones')}
+        </NavLink>
+        <NavLink to="/sucesos" className={link}>
+          <span className="material-symbols-outlined">event_note</span>
+          {t('Sucesos')}
+        </NavLink>
+        <NavLink to="/alertas" className={link}>
+          <span className="material-symbols-outlined">notifications_active</span>
+          {t('Alertas')}
+        </NavLink>
+        <NavLink to="/desaparecidas" className={link}>
+          <span className="material-symbols-outlined">person_search</span>
+          {t('Personas Desaparecidas')}
+        </NavLink>
+        <NavLink to="/asistente-ia" className={link}>
+          <span className="material-symbols-outlined">psychology</span>
+          {t('Asistente IA')}
+        </NavLink>
+        <NavLink to="/grafo" className={link}>
+          <span className="material-symbols-outlined">hub</span>
+          {t('Grafo Red Thread')}
+        </NavLink>
       </nav>
 
-      <div className="user-info">
-        <div className="username">{user?.nombreCompleto || user?.username}</div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--texto-suave)' }}>{user?.rol}</div>
-        <button
-          className="secundario"
-          style={{ marginTop: '0.6rem', width: '100%', fontSize: '0.85rem', padding: '0.4rem' }}
-          onClick={logout}
-        >
-          Cerrar sesión
+      <div className="sidebar-footer">
+        <button className="btn-investigation" onClick={nuevaInvestigacion}>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_circle</span>
+          {t('Nueva Investigación')}
         </button>
+
+        <div className="user-card">
+          <div className="user-avatar">
+            <span className="material-symbols-outlined">account_circle</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="user-info-name">{user?.nombreCompleto || user?.username}</div>
+            <div className="user-info-role">{user?.rol}</div>
+          </div>
+          <button className="btn-logout" onClick={logout} title={t('Cerrar sesión')}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>logout</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

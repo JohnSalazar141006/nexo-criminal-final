@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import type {
   Persona, Vehiculo, Ubicacion, Suceso, Alerta, Vinculo,
-  Relacion, UserSession, GrafoData, EstadoAlerta
+  Relacion, UserSession, GrafoData, EstadoAlerta, PersonaDesaparecida,
+  MensajeChat, RespuestaIA
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -97,6 +98,67 @@ export const grafoService = {
 // ---- Vinculos ----
 export const vinculoService = {
   listar: async (): Promise<Vinculo[]> => (await api.get('/vinculos')).data,
+};
+
+// ---- Personas Desaparecidas ----
+export const desaparecidaService = {
+  listar: async (params?: { estado?: string; prioridad?: string }): Promise<PersonaDesaparecida[]> =>
+    (await api.get('/desaparecidas', { params })).data,
+
+  obtener: async (id: number): Promise<PersonaDesaparecida> =>
+    (await api.get(`/desaparecidas/${id}`)).data,
+
+  crear: async (p: PersonaDesaparecida): Promise<PersonaDesaparecida> =>
+    (await api.post('/desaparecidas', p)).data,
+
+  actualizar: async (id: number, p: PersonaDesaparecida): Promise<PersonaDesaparecida> =>
+    (await api.put(`/desaparecidas/${id}`, p)).data,
+
+  cambiarEstado: async (id: number, estado: string): Promise<PersonaDesaparecida> =>
+    (await api.patch(`/desaparecidas/${id}/estado`, { estado })).data,
+
+  subirFoto: async (id: number, archivo: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    const { data } = await api.post(`/desaparecidas/${id}/foto`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  eliminar: async (id: number): Promise<void> => {
+    await api.delete(`/desaparecidas/${id}`);
+  },
+
+  estadisticas: async (): Promise<{
+    total: number; buscadas: number; encontradasVivas: number;
+    encontradasFallecidas: number; criticas: number;
+  }> => (await api.get('/desaparecidas/estadisticas')).data,
+
+  cercanas: async (lat: number, lng: number, radio = 5000): Promise<PersonaDesaparecida[]> =>
+    (await api.get('/desaparecidas/cercanas', { params: { lat, lng, radioMetros: radio } })).data,
+};
+
+// ---- IA ----
+export const iaService = {
+  estado: async (): Promise<{ configurada: boolean; modelo: string }> =>
+    (await api.get('/ia/estado')).data,
+
+  chat: async (
+    historial: MensajeChat[],
+    pregunta: string,
+    incluirContexto = true
+  ): Promise<RespuestaIA> =>
+    (await api.post('/ia/chat', { historial, pregunta, incluirContexto })).data,
+
+  zonasBusqueda: async (id: number): Promise<RespuestaIA> =>
+    (await api.post(`/ia/zonas-busqueda/${id}`)).data,
+
+  similitudDesapariciones: async (): Promise<RespuestaIA> =>
+    (await api.post('/ia/similitud-desapariciones')).data,
+
+  reporte: async (tipo: 'desaparecida' | 'suceso' | 'alerta', id: number): Promise<RespuestaIA> =>
+    (await api.post(`/ia/reporte/${tipo}/${id}`)).data,
 };
 
 export default api;

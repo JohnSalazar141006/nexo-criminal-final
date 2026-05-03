@@ -6,6 +6,8 @@ export type TipoAlerta = 'NODO_LOGISTICO' | 'VEHICULO_APOYO' | 'INTERMEDIARIO' |
 export type NivelRiesgo = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO';
 export type EstadoAlerta = 'PENDIENTE' | 'EN_REVISION' | 'CONFIRMADA' | 'DESCARTADA';
 export type TipoRelacion = 'FAMILIAR' | 'AMIGO' | 'LABORAL' | 'CONTACTO_TELEFONICO' | 'REDES_SOCIALES' | 'OTRO';
+export type EstadoDesaparicion = 'BUSCADA' | 'ENCONTRADA_VIVA' | 'ENCONTRADA_FALLECIDA' | 'ARCHIVADA';
+export type PrioridadDesaparicion = 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAJA';
 
 export interface Persona {
   id?: number;
@@ -91,4 +93,49 @@ export interface UserSession {
 export interface GrafoData {
   nodes: Array<{ data: { id: string; label: string; tipo: string; subtipo?: string; sospechoso?: boolean } }>;
   edges: Array<{ data: { id: string; source: string; target: string; regla: string; score?: number; tipo: string } }>;
+}
+
+export interface PersonaDesaparecida {
+  id?: number;
+  documento: string;
+  nombre: string;
+  apellido: string;
+  alias?: string;
+  fechaNacimiento?: string;
+  genero?: string;
+  estaturaCm?: number;
+  pesoKg?: number;
+  contextura?: string;
+  colorCabello?: string;
+  colorOjos?: string;
+  señasParticulares?: string;
+  ropaAlDesaparecer?: string;
+  fotoUrl?: string;
+  fechaDesaparicion: string;
+  ultimaUbicacion?: Ubicacion | null;
+  circunstancias?: string;
+  reportanteNombre?: string;
+  reportanteTelefono?: string;
+  reportanteRelacion?: string;
+  estado: EstadoDesaparicion;
+  prioridad: PrioridadDesaparicion;
+  analisisIA?: string;
+  zonasBusquedaIA?: string;
+  fechaResolucion?: string;
+  creadoEn?: string;
+  actualizadoEn?: string;
+}
+
+// ========== IA ==========
+export interface MensajeChat {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface RespuestaIA {
+  contenido: string;
+  modelo: string;
+  tokensEntrada?: number;
+  tokensSalida?: number;
+  durationMs?: number;
 }

@@ -1,9 +1,10 @@
 package com.nexocriminal.domain.avistamiento;
 
-import com.nexocriminal.domain.persona.Persona;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.nexocriminal.domain.ubicacion.Ubicacion;
 import com.nexocriminal.domain.vehiculo.Vehiculo;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -12,24 +13,26 @@ import java.time.LocalDateTime;
 @Table(name = "avistamiento")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Avistamiento {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehiculo_id")
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "vehiculo_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Vehiculo vehiculo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "persona_id")
-    private Persona persona;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ubicacion_id")
+    @NotNull
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "ubicacion_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Ubicacion ubicacion;
 
+    @NotNull
     @Column(name = "fecha_hora", nullable = false)
     private LocalDateTime fechaHora;
 

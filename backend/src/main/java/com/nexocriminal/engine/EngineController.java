@@ -50,4 +50,9 @@ public class EngineController {
     public ReglaVinculo.ResultadoRegla ejecutarModusOperandi() {
         return engineService.ejecutarModusOperandi();
     }
+
+    @PostMapping("/cluster-desapariciones")
+    public ReglaVinculo.ResultadoRegla ejecutarClusterDesapariciones() {
+        return engineService.ejecutarClusterDesapariciones();
+    }   
 }

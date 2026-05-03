@@ -13,6 +13,9 @@ Por defecto crea:
     - 20 sucesos (robos y desapariciones)
     - 60 relaciones sociales
     - 40 avistamientos (para detectar escolta)
+
+El script auto-registra el usuario si no existe, asi funciona
+"out-of-the-box" en cualquier equipo recien clonado.
 """
 
 import argparse
@@ -38,16 +41,52 @@ TIPOS_REL = ['FAMILIAR', 'AMIGO', 'LABORAL', 'CONTACTO_TELEFONICO', 'REDES_SOCIA
 
 
 class NexoClient:
-    def __init__(self, base_url, token=None):
+    def __init__(self, base_url):
         self.base = base_url.rstrip('/')
         self.s = requests.Session()
-        if token:
-            self.s.headers['Authorization'] = f'Bearer {token}'
         self.s.headers['Content-Type'] = 'application/json'
 
-    def login(self, username='admin', password='admin123'):
-        r = self.s.post(f'{self.base}/api/v1/auth/login',
-                        json={'username': username, 'password': password})
+    def registrar_si_no_existe(self, username, password, nombre_completo='Usuario Generador'):
+        """Intenta registrar el usuario. Si ya existe, lo ignora."""
+        try:
+            r = self.s.post(
+                f'{self.base}/api/v1/auth/registrar',
+                json={
+                    'username': username,
+                    'password': password,
+                    'nombreCompleto': nombre_completo,
+                },
+                timeout=10,
+            )
+            if r.status_code == 200:
+                print(f'[OK] Usuario "{username}" creado')
+            elif r.status_code == 400:
+                # Usuario ya existe: perfecto, seguimos
+                print(f'[INFO] Usuario "{username}" ya existia, se reutiliza')
+            else:
+                print(f'[WARN] Registro devolvio {r.status_code}: {r.text[:120]}')
+        except requests.exceptions.RequestException as e:
+            print(f'[WARN] No se pudo registrar: {e}')
+
+    def login(self, username, password):
+        try:
+            r = self.s.post(
+                f'{self.base}/api/v1/auth/login',
+                json={'username': username, 'password': password},
+                timeout=10,
+            )
+        except requests.exceptions.ConnectionError:
+            print(f'\n[ERROR] No se pudo conectar con {self.base}')
+            print('        Asegurate de que el backend Spring Boot este corriendo')
+            print('        en otra terminal: mvn spring-boot:run\n')
+            raise SystemExit(1)
+
+        if r.status_code == 401:
+            print(f'\n[ERROR] Credenciales invalidas para el usuario "{username}".')
+            print('        Probá con otro usuario usando --usuario NOMBRE --password CLAVE')
+            print('        o reiniciá el backend con la base vacia.\n')
+            raise SystemExit(1)
+
         r.raise_for_status()
         self.s.headers['Authorization'] = f"Bearer {r.json()['token']}"
         print(f'[OK] Login exitoso como {username}')
@@ -250,20 +289,31 @@ def crear_avistamientos(cli, n, vehiculos, ubicaciones):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--api', default='http://localhost:8080')
+    ap = argparse.ArgumentParser(
+        description='Genera datos simulados y los carga via API REST en Nexo Criminal.'
+    )
+    ap.add_argument('--api', default='http://localhost:8080',
+                    help='URL base del backend (default: http://localhost:8080)')
     ap.add_argument('--n-personas', type=int, default=50)
     ap.add_argument('--n-vehiculos', type=int, default=30)
     ap.add_argument('--n-ubicaciones', type=int, default=15)
     ap.add_argument('--n-sucesos', type=int, default=20)
     ap.add_argument('--n-relaciones', type=int, default=60)
     ap.add_argument('--n-avistamientos', type=int, default=40)
-    ap.add_argument('--usuario', default='admin')
+    ap.add_argument('--usuario', default='admin2',
+                    help='Usuario a usar (se crea automaticamente si no existe)')
     ap.add_argument('--password', default='admin123')
+    ap.add_argument('--saltar-registro', action='store_true',
+                    help='No intentar registrar el usuario (si ya sabes que existe)')
     args = ap.parse_args()
 
     print(f'=== Generando datos para {args.api} ===')
     cli = NexoClient(args.api)
+
+    # Intento auto-registro (silencioso si el usuario ya existe)
+    if not args.saltar_registro:
+        cli.registrar_si_no_existe(args.usuario, args.password)
+
     cli.login(args.usuario, args.password)
 
     personas = crear_personas(cli, args.n_personas)
@@ -274,8 +324,11 @@ def main():
     crear_avistamientos(cli, args.n_avistamientos, vehiculos, ubicaciones)
 
     print('\n=== LISTO ===')
-    print(f'Ahora ejecuta en el frontend el boton "Ejecutar motor completo"')
+    print('Ahora ejecuta en el frontend el boton "Ejecutar motor completo"')
     print(f'o con curl: curl -X POST {args.api}/api/v1/engine/ejecutar-todo')
+    print('\nCredenciales para loguearte en el frontend:')
+    print(f'  Usuario: {args.usuario}')
+    print(f'  Password: {args.password}')
 
 
 if __name__ == '__main__':

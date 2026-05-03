@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './services/AuthContext';
+import { PrefsProvider } from './services/PrefsContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Personas from './pages/Personas';
@@ -7,14 +8,22 @@ import Vehiculos from './pages/Vehiculos';
 import Ubicaciones from './pages/Ubicaciones';
 import Sucesos from './pages/Sucesos';
 import Alertas from './pages/Alertas';
+import Desaparecidas from './pages/Desaparecidas';
+import AsistenteIA from './pages/AsistenteIA';
 import Grafo from './pages/Grafo';
 import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import FooterStatus from './components/FooterStatus';
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-container">
+    <div className="app-layout">
       <Sidebar />
-      <main className="main-content">{children}</main>
+      <div className="main-content">
+        <TopBar />
+        <div className="page">{children}</div>
+        <FooterStatus />
+      </div>
     </div>
   );
 }
@@ -31,6 +40,8 @@ function ProtectedRoutes() {
         <Route path="/ubicaciones" element={<Ubicaciones />} />
         <Route path="/sucesos" element={<Sucesos />} />
         <Route path="/alertas" element={<Alertas />} />
+        <Route path="/desaparecidas" element={<Desaparecidas />} />
+        <Route path="/asistente-ia" element={<AsistenteIA />} />
         <Route path="/grafo" element={<Grafo />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -38,19 +49,15 @@ function ProtectedRoutes() {
   );
 }
 
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/*" element={<ProtectedRoutes />} />
-    </Routes>
-  );
-}
-
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <PrefsProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={<ProtectedRoutes />} />
+        </Routes>
+      </PrefsProvider>
     </AuthProvider>
   );
 }
