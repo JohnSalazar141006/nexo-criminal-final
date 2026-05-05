@@ -1,6 +1,7 @@
 import Modal from './Modal';
 import type { PersonaDesaparecida, EstadoDesaparicion } from '../types';
 import BotonIA from './BotonIA';
+import { fileUrl } from '../services/files';
 
 interface Props {
   persona: PersonaDesaparecida;
@@ -44,7 +45,7 @@ export default function ModalDesaparecida({ persona, abierto, onClose, onEditar,
       }}>
         <div>
           {persona.fotoUrl ? (
-            <img src={persona.fotoUrl} alt={`${persona.nombre} ${persona.apellido}`}
+            <img src={fileUrl(persona.fotoUrl)} alt={`${persona.nombre} ${persona.apellido}`}
               style={{
                 width: '100%',
                 height: 220,

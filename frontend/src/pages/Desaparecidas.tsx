@@ -13,6 +13,7 @@ import Modal from '../components/Modal';
 import ModalDesaparecida from '../components/ModalDesaparecida';
 import FormularioDesaparecida from '../components/FormularioDesaparecida';
 import { exportarCSV } from '../services/exportar';
+import { fileUrl } from '../services/files';
 
 const estadoLabel: Record<EstadoDesaparicion, string> = {
   BUSCADA: 'Buscada',
@@ -317,7 +318,7 @@ export default function Desaparecidas() {
                     }}>
                       {p.fotoUrl ? (
                         <img
-                          src={p.fotoUrl}
+                          src={fileUrl(p.fotoUrl)}
                           alt={`${p.nombre} ${p.apellido}`}
                           style={{
                             width: '100%',
@@ -475,7 +476,7 @@ export default function Desaparecidas() {
                     <tr key={p.id} style={{ borderLeft: `3px solid ${prioridadColor[p.prioridad]}` }}>
                       <td style={{ width: 50 }}>
                         {p.fotoUrl ? (
-                          <img src={p.fotoUrl} alt={p.nombre} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />
+                          <img src={fileUrl(p.fotoUrl)} alt={p.nombre} style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />
                         ) : (
                           <div className="avatar-sm">{iniciales(p.nombre, p.apellido)}</div>
                         )}

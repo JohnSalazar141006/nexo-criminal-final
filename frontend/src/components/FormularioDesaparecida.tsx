@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { desaparecidaService } from '../services/api';
+import { fileUrl } from '../services/files';
 import type {
   PersonaDesaparecida, EstadoDesaparicion, PrioridadDesaparicion, Ubicacion,
 } from '../types';
@@ -46,7 +47,7 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
         fechaDesaparicion: formatoFechaInput(inicial.fechaDesaparicion),
         fechaNacimiento: formatoFechaSimple(inicial.fechaNacimiento),
       });
-      if (inicial.fotoUrl) setPreviewUrl(inicial.fotoUrl);
+      if (inicial.fotoUrl) setPreviewUrl(fileUrl(inicial.fotoUrl) || '');
     }
   }, [inicial]);
 
