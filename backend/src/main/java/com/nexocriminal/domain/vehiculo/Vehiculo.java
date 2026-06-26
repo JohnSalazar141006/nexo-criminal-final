@@ -8,6 +8,9 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+import com.nexocriminal.validacion.anotaciones.PlacaVenezolana;
+
+
 @Entity
 @Table(name = "vehiculo")
 @Getter @Setter
@@ -20,6 +23,7 @@ public class Vehiculo {
     private Long id;
 
     @NotBlank
+    @PlacaVenezolana
     @Column(unique = true, nullable = false, length = 20)
     private String placa;
 
@@ -36,6 +40,12 @@ public class Vehiculo {
 
     @Column(length = 40)
     private String color;
+
+    @Column(name = "chasis", length = 40)
+    private String chasis;
+
+    @Column(name = "declaracion", columnDefinition = "TEXT")
+    private String declaracion;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

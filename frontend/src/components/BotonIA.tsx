@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Modal from './Modal';
 import { iaService } from '../services/api';
 import type { RespuestaIA } from '../types';
+import TextoIA from './TextoIA';
+import { useToast } from '../services/ToastContext';
 
 interface Props {
   tipo: 'desaparecida' | 'suceso' | 'alerta';
@@ -16,6 +18,7 @@ export default function BotonIA({ tipo, id, accion = 'reporte', label, icono = '
   const [cargando, setCargando] = useState(false);
   const [respuesta, setRespuesta] = useState<RespuestaIA | null>(null);
   const [error, setError] = useState('');
+  const toast = useToast();
 
   const ejecutar = async () => {
     setAbierto(true);
@@ -41,7 +44,7 @@ export default function BotonIA({ tipo, id, accion = 'reporte', label, icono = '
   const copiar = () => {
     if (respuesta) {
       navigator.clipboard.writeText(respuesta.contenido);
-      alert('Copiado al portapapeles');
+      toast.exito('Copiado al portapapeles');
     }
   };
 
@@ -99,11 +102,10 @@ export default function BotonIA({ tipo, id, accion = 'reporte', label, icono = '
               fontSize: 13,
               lineHeight: 1.7,
               color: 'var(--slate-200)',
-              whiteSpace: 'pre-wrap',
               maxHeight: 500,
               overflowY: 'auto',
             }}>
-              {respuesta.contenido}
+              <TextoIA texto={respuesta.contenido} />
             </div>
 
             <div style={{

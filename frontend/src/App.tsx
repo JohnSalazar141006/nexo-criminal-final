@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './services/AuthContext';
 import { PrefsProvider } from './services/PrefsContext';
+import { ToastProvider } from './services/ToastContext';
+import { ConfirmProvider } from './services/ConfirmContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Personas from './pages/Personas';
@@ -14,6 +16,7 @@ import Grafo from './pages/Grafo';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import FooterStatus from './components/FooterStatus';
+
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -29,7 +32,21 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoutes() {
-  const { user } = useAuth();
+  const { user, cargando } = useAuth();
+
+  // Mientras se resuelve la sesion (importante en SSO: refresh asincrono),
+  // no decidir todavia para evitar parpadeo a /login.
+  if (cargando) {
+    return (
+      <div className="login-page">
+        <div className="login-box" style={{ textAlign: 'center' }}>
+          <div className="login-title">Nexo Criminal</div>
+          <p className="login-desc" style={{ marginTop: 12 }}>Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   return (
     <Layout>
@@ -53,10 +70,14 @@ export default function App() {
   return (
     <AuthProvider>
       <PrefsProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/*" element={<ProtectedRoutes />} />
-        </Routes>
+        <ToastProvider>
+          <ConfirmProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/*" element={<ProtectedRoutes />} />
+            </Routes>
+          </ConfirmProvider>
+        </ToastProvider>
       </PrefsProvider>
     </AuthProvider>
   );

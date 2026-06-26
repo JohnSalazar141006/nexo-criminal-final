@@ -1,6 +1,7 @@
 import Modal from './Modal';
 import type { PersonaDesaparecida, EstadoDesaparicion } from '../types';
 import BotonIA from './BotonIA';
+import TextoIA from './TextoIA';
 import { fileUrl } from '../services/files';
 
 interface Props {
@@ -225,9 +226,8 @@ export default function ModalDesaparecida({ persona, abierto, onClose, onEditar,
             fontSize: 13,
             color: 'var(--slate-300)',
             lineHeight: 1.6,
-            whiteSpace: 'pre-wrap',
           }}>
-            {persona.analisisIA}
+            <TextoIA texto={persona.analisisIA} />
           </div>
         </Section>
       )}

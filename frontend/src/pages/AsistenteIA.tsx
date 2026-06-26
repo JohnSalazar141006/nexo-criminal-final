@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { iaService } from '../services/api';
 import type { MensajeChat } from '../types';
+import TextoIA from '../components/TextoIA';
 
 const SUGERENCIAS = [
   '¿Cuáles son las alertas críticas activas?',
@@ -222,10 +223,11 @@ export default function AsistenteIA() {
                   color: 'white',
                   fontSize: 13,
                   lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                 }}>
-                  {m.content}
+                  {m.role === 'assistant'
+                    ? <TextoIA texto={m.content} />
+                    : <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>}
                 </div>
               </div>
             ))}

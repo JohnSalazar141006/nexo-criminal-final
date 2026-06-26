@@ -8,6 +8,7 @@ import com.nexocriminal.domain.vehiculo.VehiculoRepository;
 import com.nexocriminal.domain.vehiculo.EstadoVehiculo;
 import com.nexocriminal.domain.vinculo.Vinculo;
 import com.nexocriminal.domain.vinculo.VinculoRepository;
+import com.nexocriminal.config.ConfiguracionMotorService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +42,7 @@ public class ReglaEscoltaVehicular implements ReglaVinculo {
     private final VehiculoRepository vehiculoRepository;
     private final VinculoRepository vinculoRepository;
     private final JpaRepository<Alerta, Long> alertaRepository;
-
-    @Value("${nexo.engine.escolta.ventana-minutos:2}")
-    private int ventanaMinutos;
-
-    @Value("${nexo.engine.escolta.min-coincidencias:3}")
-    private int minCoincidencias;
+    private final ConfiguracionMotorService configService;
 
     @Override
     public String nombre() {
@@ -56,6 +52,10 @@ public class ReglaEscoltaVehicular implements ReglaVinculo {
     @Override
     @SuppressWarnings("unchecked")
     public ResultadoRegla ejecutar() {
+        var cfg = configService.obtener();
+        int ventanaMinutos = cfg.getEscoltaVentanaMinutos();
+        int minCoincidencias = cfg.getEscoltaMinCoincidencias();
+
         log.info("Ejecutando {} (ventana={}min, minCoincidencias={})",
                 nombre(), ventanaMinutos, minCoincidencias);
 

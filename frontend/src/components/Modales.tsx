@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { usePrefs } from '../services/PrefsContext';
 import { useAuth } from '../services/AuthContext';
-import api from '../services/api';
+import api, { configMotorService } from '../services/api';
+import { useConfirm } from '../services/ConfirmContext';
+import { useToast } from '../services/ToastContext';
 
 /* ============================================================
    MODAL DE CONFIGURACIÓN
@@ -14,19 +16,80 @@ export function ModalConfiguracion({
 }: {
   abierto: boolean;
   onClose: () => void;
-  pestañaInicial?: 'general' | 'notifs' | 'motor';
+  pestañaInicial?: 'general' | 'motor';
 }) {
-  const { prefs, actualizar, actualizarUmbrales, actualizarNotificaciones, reset } = usePrefs();
-  const [tab, setTab] = useState<'general' | 'notifs' | 'motor'>(pestañaInicial);
+  const { prefs, actualizar, reset } = usePrefs();
+  const [tab, setTab] = useState<'general' | 'motor'>(pestañaInicial);
   const [guardado, setGuardado] = useState(false);
+  const confirmar = useConfirm();
+  const toast = useToast();
+
+  // Estado local de los umbrales del motor (cargados del backend)
+  const [umbrales, setUmbrales] = useState<any>(null);
+  const [cargandoMotor, setCargandoMotor] = useState(false);
+  const [guardandoMotor, setGuardandoMotor] = useState(false);
 
   useEffect(() => {
     if (abierto) setTab(pestañaInicial);
   }, [abierto, pestañaInicial]);
 
-  const guardar = () => {
+  // Carga los umbrales del backend cuando se abre la pestaña motor
+  useEffect(() => {
+    if (abierto && tab === 'motor' && !umbrales) {
+      setCargandoMotor(true);
+      configMotorService.obtener()
+        .then((data) => setUmbrales(data))
+        .catch(() => toast.error('No se pudieron cargar los umbrales del motor'))
+        .finally(() => setCargandoMotor(false));
+    }
+  }, [abierto, tab]);
+
+  // Resetea el estado del motor al cerrar (para recargar fresco la próxima vez)
+  useEffect(() => {
+    if (!abierto) setUmbrales(null);
+  }, [abierto]);
+
+  const setU = (campo: string, valor: number) =>
+    setUmbrales((prev: any) => ({ ...prev, [campo]: valor }));
+
+  // Guardar: en pestaña motor → backend; en otras → localStorage (como antes)
+  const guardar = async () => {
+    if (tab === 'motor') {
+      if (!umbrales) return;
+      setGuardandoMotor(true);
+      try {
+        const actualizada = await configMotorService.guardar(umbrales);
+        setUmbrales(actualizada);
+        toast.exito('Umbrales del motor guardados');
+      } catch {
+        toast.error('No se pudieron guardar los umbrales');
+      } finally {
+        setGuardandoMotor(false);
+      }
+      return;
+    }
     setGuardado(true);
     setTimeout(() => setGuardado(false), 1800);
+  };
+
+  const restaurarMotor = async () => {
+    const ok = await confirmar({
+      titulo: 'Restaurar umbrales del motor',
+      mensaje: '¿Volver todos los umbrales del motor a sus valores originales?',
+      textoConfirmar: 'Restaurar',
+      peligro: true,
+    });
+    if (!ok) return;
+    setGuardandoMotor(true);
+    try {
+      const defaults = await configMotorService.restaurarDefaults();
+      setUmbrales(defaults);
+      toast.exito('Umbrales restaurados a sus valores originales');
+    } catch {
+      toast.error('No se pudieron restaurar los umbrales');
+    } finally {
+      setGuardandoMotor(false);
+    }
   };
 
   return (
@@ -34,9 +97,6 @@ export function ModalConfiguracion({
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--slate-800)', paddingBottom: 12 }}>
         <button className={`option-chip ${tab === 'general' ? 'active' : ''}`} onClick={() => setTab('general')}>
           General
-        </button>
-        <button className={`option-chip ${tab === 'notifs' ? 'active' : ''}`} onClick={() => setTab('notifs')}>
-          Notificaciones
         </button>
         <button className={`option-chip ${tab === 'motor' ? 'active' : ''}`} onClick={() => setTab('motor')}>
           Umbrales del motor
@@ -68,14 +128,20 @@ export function ModalConfiguracion({
               </button>
             </div>
           </div>
-
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--slate-800)' }}>
             <button
               className="btn-ghost"
-              onClick={() => {
-                if (confirm('¿Restaurar todas las configuraciones a sus valores por defecto?')) {
+              onClick={async () => {
+                const ok = await confirmar({
+                  titulo: 'Restaurar configuración',
+                  mensaje: '¿Restaurar las preferencias de interfaz a sus valores por defecto?',
+                  textoConfirmar: 'Restaurar',
+                  peligro: true,
+                });
+                if (ok) {
                   reset();
                   guardar();
+                  toast.exito('Configuración restaurada');
                 }
               }}
             >
@@ -86,139 +152,146 @@ export function ModalConfiguracion({
         </div>
       )}
 
-      {tab === 'notifs' && (
-        <div>
-          <div className="setting-row">
-            <div className="setting-label">
-              <span className="material-symbols-outlined">priority_high</span>
-              <div>
-                <div className="setting-label-text">Alertas críticas</div>
-                <div className="setting-label-desc">Mostrar notificaciones del nivel crítico y alto</div>
-              </div>
-            </div>
-            <div
-              className={`toggle ${prefs.notificaciones.alertasCriticas ? 'on' : ''}`}
-              onClick={() => actualizarNotificaciones({ alertasCriticas: !prefs.notificaciones.alertasCriticas })}
-            ></div>
-          </div>
-
-          <div className="setting-row">
-            <div className="setting-label">
-              <span className="material-symbols-outlined">summarize</span>
-              <div>
-                <div className="setting-label-text">Resumen diario</div>
-                <div className="setting-label-desc">Recibir un resumen con las alertas del día al iniciar sesión</div>
-              </div>
-            </div>
-            <div
-              className={`toggle ${prefs.notificaciones.resumenDiario ? 'on' : ''}`}
-              onClick={() => actualizarNotificaciones({ resumenDiario: !prefs.notificaciones.resumenDiario })}
-            ></div>
-          </div>
-
-          <div className="setting-row">
-            <div className="setting-label">
-              <span className="material-symbols-outlined">volume_up</span>
-              <div>
-                <div className="setting-label-text">Sonido de alertas</div>
-                <div className="setting-label-desc">Reproducir un tono al detectar alertas críticas</div>
-              </div>
-            </div>
-            <div
-              className={`toggle ${prefs.notificaciones.sonidoAlertas ? 'on' : ''}`}
-              onClick={() => actualizarNotificaciones({ sonidoAlertas: !prefs.notificaciones.sonidoAlertas })}
-            ></div>
-          </div>
-        </div>
-      )}
-
       {tab === 'motor' && (
         <div>
           <p style={{ color: 'var(--slate-400)', fontSize: 12, marginBottom: 20 }}>
             Ajustá los parámetros heurísticos usados por el motor Red Thread. Los cambios
-            se aplican la próxima vez que se ejecute el análisis.
+            se guardan en el servidor y se aplican la próxima vez que se ejecute el análisis.
           </p>
 
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
-              Regla: Nodo logístico
-            </h3>
-
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Radio de búsqueda</span>
-                <span className="slider-row-value">{prefs.umbrales.nodoLogisticoRadio} m</span>
-              </div>
-              <input type="range" min="100" max="2000" step="50"
-                value={prefs.umbrales.nodoLogisticoRadio}
-                onChange={(e) => actualizarUmbrales({ nodoLogisticoRadio: Number(e.target.value) })} />
+          {cargandoMotor || !umbrales ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--slate-500)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 32 }}>hourglass_empty</span>
+              <div style={{ marginTop: 8 }}>Cargando umbrales...</div>
             </div>
-
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Mínimo de vehículos cercanos</span>
-                <span className="slider-row-value">{prefs.umbrales.nodoLogisticoMinVehiculos}</span>
+          ) : (
+            <>
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
+                  Regla: Nodo logístico
+                </h3>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Radio de búsqueda</span>
+                    <span className="slider-row-value">{umbrales.nodoRadioMetros} m</span>
+                  </div>
+                  <input type="range" min="100" max="2000" step="50"
+                    value={umbrales.nodoRadioMetros}
+                    onChange={(e) => setU('nodoRadioMetros', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Mínimo de vehículos cercanos</span>
+                    <span className="slider-row-value">{umbrales.nodoMinVehiculos}</span>
+                  </div>
+                  <input type="range" min="2" max="10"
+                    value={umbrales.nodoMinVehiculos}
+                    onChange={(e) => setU('nodoMinVehiculos', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Ventana temporal</span>
+                    <span className="slider-row-value">{umbrales.nodoVentanaHoras} h</span>
+                  </div>
+                  <input type="range" min="12" max="168" step="12"
+                    value={umbrales.nodoVentanaHoras}
+                    onChange={(e) => setU('nodoVentanaHoras', Number(e.target.value))} />
+                </div>
               </div>
-              <input type="range" min="2" max="10"
-                value={prefs.umbrales.nodoLogisticoMinVehiculos}
-                onChange={(e) => actualizarUmbrales({ nodoLogisticoMinVehiculos: Number(e.target.value) })} />
-            </div>
 
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Ventana temporal</span>
-                <span className="slider-row-value">{prefs.umbrales.nodoLogisticoVentanaHoras} h</span>
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
+                  Regla: Vehículo escolta
+                </h3>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Mínimo de coincidencias</span>
+                    <span className="slider-row-value">{umbrales.escoltaMinCoincidencias}</span>
+                  </div>
+                  <input type="range" min="2" max="10"
+                    value={umbrales.escoltaMinCoincidencias}
+                    onChange={(e) => setU('escoltaMinCoincidencias', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Ventana de tiempo entre avistamientos</span>
+                    <span className="slider-row-value">{umbrales.escoltaVentanaMinutos} min</span>
+                  </div>
+                  <input type="range" min="1" max="30"
+                    value={umbrales.escoltaVentanaMinutos}
+                    onChange={(e) => setU('escoltaVentanaMinutos', Number(e.target.value))} />
+                </div>
               </div>
-              <input type="range" min="12" max="168" step="12"
-                value={prefs.umbrales.nodoLogisticoVentanaHoras}
-                onChange={(e) => actualizarUmbrales({ nodoLogisticoVentanaHoras: Number(e.target.value) })} />
-            </div>
-          </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
-              Regla: Vehículo escolta
-            </h3>
-
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Mínimo de coincidencias</span>
-                <span className="slider-row-value">{prefs.umbrales.escoltaMinCoincidencias}</span>
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
+                  Regla: Modus operandi
+                </h3>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Umbral de similitud</span>
+                    <span className="slider-row-value">{(umbrales.modusUmbral * 100).toFixed(0)}%</span>
+                  </div>
+                  <input type="range" min="0.5" max="1" step="0.05"
+                    value={umbrales.modusUmbral}
+                    onChange={(e) => setU('modusUmbral', Number(e.target.value))} />
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--slate-500)', marginTop: 8 }}>
+                  Valores más altos → mayor precisión, menos coincidencias. Valores más bajos →
+                  más patrones detectados pero con más falsos positivos.
+                </p>
               </div>
-              <input type="range" min="2" max="10"
-                value={prefs.umbrales.escoltaMinCoincidencias}
-                onChange={(e) => actualizarUmbrales({ escoltaMinCoincidencias: Number(e.target.value) })} />
-            </div>
 
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Ventana de tiempo entre avistamientos</span>
-                <span className="slider-row-value">{prefs.umbrales.escoltaVentanaMinutos} min</span>
+              <div>
+                <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
+                  Regla: Cluster de desapariciones
+                </h3>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Radio del cluster</span>
+                    <span className="slider-row-value">{umbrales.clusterRadioMetros} m</span>
+                  </div>
+                  <input type="range" min="500" max="5000" step="100"
+                    value={umbrales.clusterRadioMetros}
+                    onChange={(e) => setU('clusterRadioMetros', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Mínimo de personas en el cluster</span>
+                    <span className="slider-row-value">{umbrales.clusterMin}</span>
+                  </div>
+                  <input type="range" min="2" max="10"
+                    value={umbrales.clusterMin}
+                    onChange={(e) => setU('clusterMin', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Ventana temporal</span>
+                    <span className="slider-row-value">{umbrales.clusterVentanaDias} días</span>
+                  </div>
+                  <input type="range" min="7" max="90" step="1"
+                    value={umbrales.clusterVentanaDias}
+                    onChange={(e) => setU('clusterVentanaDias', Number(e.target.value))} />
+                </div>
+                <div className="slider-row">
+                  <div className="slider-row-top">
+                    <span className="slider-row-label">Radio para nodo sospechoso</span>
+                    <span className="slider-row-value">{umbrales.clusterRadioNodoSospechoso} m</span>
+                  </div>
+                  <input type="range" min="200" max="3000" step="100"
+                    value={umbrales.clusterRadioNodoSospechoso}
+                    onChange={(e) => setU('clusterRadioNodoSospechoso', Number(e.target.value))} />
+                </div>
               </div>
-              <input type="range" min="1" max="30"
-                value={prefs.umbrales.escoltaVentanaMinutos}
-                onChange={(e) => actualizarUmbrales({ escoltaVentanaMinutos: Number(e.target.value) })} />
-            </div>
-          </div>
 
-          <div>
-            <h3 style={{ fontSize: 12, color: 'var(--red-500)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
-              Regla: Modus operandi
-            </h3>
-            <div className="slider-row">
-              <div className="slider-row-top">
-                <span className="slider-row-label">Umbral de similitud</span>
-                <span className="slider-row-value">{(prefs.umbrales.modusUmbral * 100).toFixed(0)}%</span>
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--slate-800)' }}>
+                <button className="btn-ghost" onClick={restaurarMotor} disabled={guardandoMotor}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>restart_alt</span>
+                  Restaurar valores originales del motor
+                </button>
               </div>
-              <input type="range" min="0.5" max="1" step="0.05"
-                value={prefs.umbrales.modusUmbral}
-                onChange={(e) => actualizarUmbrales({ modusUmbral: Number(e.target.value) })} />
-            </div>
-            <p style={{ fontSize: 11, color: 'var(--slate-500)', marginTop: 8 }}>
-              Valores más altos → mayor precisión, menos coincidencias. Valores más bajos →
-              más patrones detectados pero con más falsos positivos.
-            </p>
-          </div>
+            </>
+          )}
         </div>
       )}
 
@@ -229,9 +302,9 @@ export function ModalConfiguracion({
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--slate-800)' }}>
-        <button className="btn-primary" onClick={guardar}>
+        <button className="btn-primary" onClick={guardar} disabled={tab === 'motor' && guardandoMotor}>
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>
-          Guardar cambios
+          {tab === 'motor' && guardandoMotor ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>
     </Modal>
@@ -363,35 +436,67 @@ export function ModalTutorial({ abierto, onClose }: { abierto: boolean; onClose:
 ============================================================ */
 export function ModalAPI({ abierto, onClose }: { abierto: boolean; onClose: () => void }) {
   const endpoints = [
-    { m: 'POST', url: '/api/v1/auth/login', d: 'Iniciar sesión (devuelve JWT)' },
-    { m: 'POST', url: '/api/v1/auth/registrar', d: 'Registrar un usuario nuevo' },
-    { m: 'GET', url: '/api/v1/personas', d: 'Listar todas las personas' },
-    { m: 'POST', url: '/api/v1/personas', d: 'Crear persona' },
-    { m: 'PUT', url: '/api/v1/personas/{id}', d: 'Actualizar persona' },
-    { m: 'DELETE', url: '/api/v1/personas/{id}', d: 'Eliminar persona' },
-    { m: 'GET', url: '/api/v1/vehiculos', d: 'Listar vehículos' },
-    { m: 'POST', url: '/api/v1/vehiculos', d: 'Registrar vehículo' },
-    { m: 'PATCH', url: '/api/v1/vehiculos/{id}/estado', d: 'Cambiar estado del vehículo' },
-    { m: 'GET', url: '/api/v1/ubicaciones', d: 'Listar ubicaciones' },
-    { m: 'POST', url: '/api/v1/ubicaciones', d: 'Registrar ubicación' },
-    { m: 'GET', url: '/api/v1/sucesos', d: 'Listar sucesos' },
-    { m: 'POST', url: '/api/v1/sucesos', d: 'Registrar suceso' },
-    { m: 'GET', url: '/api/v1/desaparecidas', d: 'Listar personas desaparecidas' },
-    { m: 'POST', url: '/api/v1/desaparecidas', d: 'Registrar desaparición' },
-    { m: 'POST', url: '/api/v1/desaparecidas/{id}/foto', d: 'Subir foto de la persona' },
-    { m: 'POST', url: '/api/v1/engine/ejecutar-todo', d: 'Ejecutar las 5 reglas del motor' },
-    { m: 'POST', url: '/api/v1/engine/nodo-logistico', d: 'Ejecutar solo nodo logístico' },
-    { m: 'POST', url: '/api/v1/engine/escolta', d: 'Ejecutar solo escolta' },
-    { m: 'POST', url: '/api/v1/engine/circulo-confianza', d: 'Ejecutar solo círculo de confianza' },
-    { m: 'POST', url: '/api/v1/engine/modus-operandi', d: 'Ejecutar solo modus operandi' },
-    { m: 'POST', url: '/api/v1/engine/cluster-desapariciones', d: 'Ejecutar cluster de desapariciones' },
-    { m: 'GET', url: '/api/v1/grafo/completo', d: 'Grafo completo en formato Cytoscape' },
-    { m: 'GET', url: '/api/v1/alertas', d: 'Listar alertas' },
-    { m: 'PATCH', url: '/api/v1/alertas/{id}/estado', d: 'Cambiar estado de alerta' },
-    { m: 'GET', url: '/api/v1/ia/estado', d: 'Estado de configuración de la IA' },
-    { m: 'POST', url: '/api/v1/ia/chat', d: 'Chat conversacional con Claude' },
-    { m: 'POST', url: '/api/v1/ia/zonas-busqueda/{id}', d: 'Predicción de zonas de búsqueda' },
-    { m: 'POST', url: '/api/v1/ia/reporte/{tipo}/{id}', d: 'Generar reporte ejecutivo' },
+      // ---- Autenticación ----
+      { m: 'POST', url: '/api/v1/auth/login', d: 'Iniciar sesión (devuelve JWT)' },
+      { m: 'POST', url: '/api/v1/auth/registrar', d: 'Registrar un usuario nuevo' },
+
+      // ---- Personas ----
+      { m: 'GET', url: '/api/v1/personas', d: 'Listar todas las personas' },
+      { m: 'POST', url: '/api/v1/personas', d: 'Crear persona' },
+      { m: 'PUT', url: '/api/v1/personas/{id}', d: 'Actualizar persona' },
+      { m: 'DELETE', url: '/api/v1/personas/{id}', d: 'Eliminar persona' },
+
+      // ---- Vehículos ----
+      { m: 'GET', url: '/api/v1/vehiculos', d: 'Listar vehículos' },
+      { m: 'POST', url: '/api/v1/vehiculos', d: 'Registrar vehículo' },
+      { m: 'PATCH', url: '/api/v1/vehiculos/{id}/estado', d: 'Cambiar estado del vehículo' },
+
+      // ---- Ubicaciones ----
+      { m: 'GET', url: '/api/v1/ubicaciones', d: 'Listar ubicaciones' },
+      { m: 'POST', url: '/api/v1/ubicaciones', d: 'Registrar ubicación' },
+
+      // ---- Sucesos ----
+      { m: 'GET', url: '/api/v1/sucesos', d: 'Listar sucesos' },
+      { m: 'POST', url: '/api/v1/sucesos', d: 'Registrar suceso' },
+
+      // ---- Desaparecidas ----
+      { m: 'GET', url: '/api/v1/desaparecidas', d: 'Listar personas desaparecidas' },
+      { m: 'POST', url: '/api/v1/desaparecidas', d: 'Registrar desaparición' },
+      { m: 'POST', url: '/api/v1/desaparecidas/{id}/foto', d: 'Subir foto de la persona' },
+
+      // ---- Motor de Reglas (Engine) ----
+      { m: 'POST', url: '/api/v1/engine/ejecutar-todo', d: 'Ejecutar las 5 reglas del motor' },
+      { m: 'POST', url: '/api/v1/engine/nodo-logistico', d: 'Ejecutar solo nodo logístico' },
+      { m: 'POST', url: '/api/v1/engine/escolta', d: 'Ejecutar solo escolta' },
+      { m: 'POST', url: '/api/v1/engine/circulo-confianza', d: 'Ejecutar solo círculo de confianza' },
+      { m: 'POST', url: '/api/v1/engine/modus-operandi', d: 'Ejecutar solo modus operandi' },
+      { m: 'POST', url: '/api/v1/engine/cluster-desapariciones', d: 'Ejecutar cluster de desapariciones' },
+
+      // ---- Configuración del Motor (Umbrales) ----
+      { m: 'GET', url: '/api/v1/config/motor', d: 'Obtener los umbrales del motor' },
+      { m: 'PUT', url: '/api/v1/config/motor', d: 'Guardar nuevos umbrales' },
+      { m: 'POST', url: '/api/v1/config/motor/default', d: 'Restaurar umbrales por defecto' },
+
+      // ---- Catálogo de Modus Operandi ----
+      { m: 'GET', url: '/api/v1/modus', d: 'Listar modus operandi activos' },
+      { m: 'GET', url: '/api/v1/modus/todos', d: 'Listar todos los modus (incluye inactivos)' },
+      { m: 'POST', url: '/api/v1/modus', d: 'Crear un modus operandi' },
+      { m: 'PUT', url: '/api/v1/modus/{id}', d: 'Actualizar un modus operandi' },
+      { m: 'DELETE', url: '/api/v1/modus/{id}', d: 'Desactivar un modus operandi' },
+
+      // ---- Grafo ----
+      { m: 'GET', url: '/api/v1/grafo/completo', d: 'Grafo completo en formato Cytoscape' },
+
+      // ---- Alertas ----
+      { m: 'GET', url: '/api/v1/alertas', d: 'Listar alertas' },
+      { m: 'PATCH', url: '/api/v1/alertas/{id}/estado', d: 'Cambiar estado de alerta' },
+
+      // ---- Inteligencia Artificial (IA) ----
+      { m: 'GET', url: '/api/v1/ia/estado', d: 'Estado de configuración de la IA' },
+      { m: 'POST', url: '/api/v1/ia/chat', d: 'Chat conversacional con Claude' },
+      { m: 'POST', url: '/api/v1/ia/zonas-busqueda/{id}', d: 'Predicción de zonas de búsqueda' },
+      { m: 'POST', url: '/api/v1/ia/reporte/{tipo}/{id}', d: 'Generar reporte ejecutivo' },
+      { m: 'POST', url: '/api/v1/ia/clasificar-modus', d: 'Clasificar modus operandi desde una descripción (IA)' }
   ];
 
   return (

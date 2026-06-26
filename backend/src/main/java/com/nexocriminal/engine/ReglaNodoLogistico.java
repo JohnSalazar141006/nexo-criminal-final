@@ -10,6 +10,7 @@ import com.nexocriminal.domain.ubicacion.UbicacionRepository;
 import com.nexocriminal.domain.ubicacion.UbicacionService;
 import com.nexocriminal.domain.vinculo.Vinculo;
 import com.nexocriminal.domain.vinculo.VinculoRepository;
+import com.nexocriminal.config.ConfiguracionMotorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,15 +39,7 @@ public class ReglaNodoLogistico implements ReglaVinculo {
     private final UbicacionService ubicacionService;
     private final VinculoRepository vinculoRepository;
     private final JpaRepository<Alerta, Long> alertaRepository;
-
-    @Value("${nexo.engine.nodo-logistico.radio-metros:500}")
-    private int radioMetros;
-
-    @Value("${nexo.engine.nodo-logistico.ventana-horas:72}")
-    private int ventanaHoras;
-
-    @Value("${nexo.engine.nodo-logistico.min-vehiculos:3}")
-    private int minVehiculos;
+    private final ConfiguracionMotorService configService;
 
     @Override
     public String nombre() {
@@ -55,6 +48,11 @@ public class ReglaNodoLogistico implements ReglaVinculo {
 
     @Override
     public ResultadoRegla ejecutar() {
+        var cfg = configService.obtener();
+        int radioMetros = cfg.getNodoRadioMetros();
+        int ventanaHoras = cfg.getNodoVentanaHoras();
+        int minVehiculos = cfg.getNodoMinVehiculos();
+
         log.info("Ejecutando {} (radio={}m, ventana={}h, minVehiculos={})",
                 nombre(), radioMetros, ventanaHoras, minVehiculos);
 

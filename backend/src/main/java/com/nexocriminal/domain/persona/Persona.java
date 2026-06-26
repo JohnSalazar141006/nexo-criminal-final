@@ -7,6 +7,9 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.nexocriminal.validacion.anotaciones.CedulaVenezolana;
+import com.nexocriminal.validacion.anotaciones.TelefonoVenezolano;
+
 @Entity
 @Table(name = "persona")
 @Getter @Setter
@@ -18,6 +21,7 @@ public class Persona {
     private Long id;
 
     @NotBlank
+    @CedulaVenezolana
     @Column(unique = true, nullable = false, length = 20)
     private String documento;
 
@@ -39,6 +43,7 @@ public class Persona {
     @Column(nullable = false, length = 20)
     private RolPersona rol;
 
+    @TelefonoVenezolano
     @Column(length = 20)
     private String telefono;
 

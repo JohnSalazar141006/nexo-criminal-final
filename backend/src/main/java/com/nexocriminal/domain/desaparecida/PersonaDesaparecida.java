@@ -7,8 +7,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+import java.util.ArrayList;
+import java.util.List;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.nexocriminal.validacion.anotaciones.CedulaVenezolana;
+import com.nexocriminal.validacion.anotaciones.TelefonoVenezolano;
 
 @Entity
 @Table(name = "persona_desaparecida")
@@ -22,6 +31,7 @@ public class PersonaDesaparecida {
     private Long id;
 
     @NotBlank
+    @CedulaVenezolana
     @Column(unique = true, nullable = false, length = 50)
     private String documento;
 
@@ -68,6 +78,21 @@ public class PersonaDesaparecida {
     @Column(name = "foto_url", length = 500)
     private String fotoUrl;
 
+    /**
+     * Coleccion de fotos de la persona (multiples fotos).
+     * fotoUrl se mantiene como foto principal por compatibilidad.
+     */
+    @OneToMany(
+        mappedBy = "personaDesaparecida",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true,
+        fetch = FetchType.EAGER
+    )
+    @OrderBy("orden ASC")
+    @JsonIgnoreProperties({"personaDesaparecida", "hibernateLazyInitializer", "handler"})
+    @Builder.Default
+    private List<FotoDesaparecida> fotos = new ArrayList<>();
+
     // Datos de la desaparición
     @NotNull
     @Column(name = "fecha_desaparicion", nullable = false)
@@ -85,6 +110,7 @@ public class PersonaDesaparecida {
     @Column(name = "reportante_nombre", length = 150)
     private String reportanteNombre;
 
+    @TelefonoVenezolano
     @Column(name = "reportante_telefono", length = 50)
     private String reportanteTelefono;
 

@@ -8,6 +8,7 @@ import ModalDetalle from '../components/ModalDetalle';
 import ModalConfirmar from '../components/ModalConfirmar';
 import Modal from '../components/Modal';
 import { exportarCSV } from '../services/exportar';
+import FormPersona from '../components/FormPersona';
 
 const ROLES: RolPersona[] = ['VICTIMA', 'SOSPECHOSO', 'TESTIGO', 'PROPIETARIO', 'INTERMEDIARIO'];
 const TIPOS_REL: TipoRelacion[] = [
@@ -91,33 +92,11 @@ export default function Personas() {
     cargar();
   }, []);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr('');
-    setOk('');
-    try {
-      if (editandoId) {
-        await personaService.actualizar(editandoId, form);
-        setOk('Persona actualizada correctamente');
-      } else {
-        await personaService.crear(form);
-        setOk('Persona registrada correctamente');
-      }
-      setForm({ documento: '', nombre: '', apellido: '', rol: 'VICTIMA' });
-      setEditandoId(null);
-      await cargar();
-      setTimeout(() => setOk(''), 3000);
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || 'Error al guardar');
-    }
-  };
-
   const editar = (p: Persona) => {
     setEditandoId(p.id!);
     setForm(p);
     setErr('');
     setOk('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const cancelar = () => {
@@ -249,93 +228,7 @@ export default function Personas() {
         </button>
       </div>
 
-      {/* Formulario */}
-      <div className="form-card" style={{ marginBottom: 24 }}>
-        <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 20 }}>
-          <span className="material-symbols-outlined">person_add</span>
-          <h3 className="card-title">
-            {editandoId ? 'Editar persona' : 'Registrar nueva persona'}
-          </h3>
-        </div>
-
-        <form onSubmit={submit}>
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Documento / ID</label>
-              <input
-                value={form.documento}
-                onChange={(e) => setForm({ ...form, documento: e.target.value })}
-                placeholder="ID-000-0000"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nombre</label>
-              <input
-                value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                placeholder="Ingresá el nombre"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Apellido</label>
-              <input
-                value={form.apellido}
-                onChange={(e) => setForm({ ...form, apellido: e.target.value })}
-                placeholder="Ingresá el apellido"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Alias / Apodo</label>
-              <input
-                value={form.alias || ''}
-                onChange={(e) => setForm({ ...form, alias: e.target.value })}
-                placeholder="Apodo conocido"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Teléfono</label>
-              <input
-                value={form.telefono || ''}
-                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                placeholder="+00 000 000 0000"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Rol</label>
-              <select
-                value={form.rol}
-                onChange={(e) => setForm({ ...form, rol: e.target.value as RolPersona })}
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {rolLabel[r]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {err && <div className="error">{err}</div>}
-          {ok && <div className="success">{ok}</div>}
-
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            {editandoId && (
-              <button type="button" className="btn-ghost" onClick={cancelar}>
-                Cancelar
-              </button>
-            )}
-            <button type="submit" className="btn-primary">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                save
-              </span>
-              {editandoId ? 'Actualizar registro' : 'Guardar en base de datos'}
-            </button>
-          </div>
-        </form>
-      </div>
+      {ok && <div className="success" style={{ marginBottom: 16 }}>{ok}</div>}
 
       {/* Tabla */}
       <div className="table-wrap">
@@ -578,6 +471,28 @@ export default function Personas() {
           }
         />
       )}
+
+      {/* Modal Editar persona */}
+      <Modal
+        abierto={editandoId !== null}
+        onClose={cancelar}
+        titulo="Editar persona"
+        icono="edit"
+        ancho={620}
+      >
+        <FormPersona
+          key={editandoId ?? 'editar'}
+          personaInicial={editandoId ? form : null}
+          onGuardado={() => {
+            setOk('Persona actualizada correctamente');
+            setEditandoId(null);
+            cargar();
+            setTimeout(() => setOk(''), 3000);
+          }}
+          onCancelar={cancelar}
+          textoGuardar="Actualizar registro"
+        />
+      </Modal>
 
       {/* Modal de eliminación */}
       <ModalConfirmar

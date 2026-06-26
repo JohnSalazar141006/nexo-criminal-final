@@ -30,6 +30,8 @@ export interface Vehiculo {
   color?: string;
   estado?: EstadoVehiculo;
   propietario?: Persona | null;
+  chasis?: string;
+  declaracion?: string;
 }
 
 export interface Ubicacion {
@@ -110,7 +112,8 @@ export interface PersonaDesaparecida {
   colorOjos?: string;
   señasParticulares?: string;
   ropaAlDesaparecer?: string;
-  fotoUrl?: string;
+  fotoUrl?: string;        // foto principal (compatibilidad)
+  fotos?: FotoDesaparecida[];  // NUEVO: todas las fotos
   fechaDesaparicion: string;
   ultimaUbicacion?: Ubicacion | null;
   circunstancias?: string;
@@ -138,4 +141,13 @@ export interface RespuestaIA {
   tokensEntrada?: number;
   tokensSalida?: number;
   durationMs?: number;
+}
+
+export interface FotoDesaparecida {
+  id?: number;
+  url: string;
+  orden: number;
+  principal: boolean;
+  descripcion?: string;
+  creadoEn?: string;
 }

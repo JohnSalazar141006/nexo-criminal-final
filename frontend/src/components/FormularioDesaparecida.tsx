@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import { desaparecidaService } from '../services/api';
+import { desaparecidaService, ubicacionService } from '../services/api';
 import { fileUrl } from '../services/files';
 import type {
   PersonaDesaparecida, EstadoDesaparicion, PrioridadDesaparicion, Ubicacion,
 } from '../types';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { divIcon } from 'leaflet';
+import Modal from './Modal';
+import GaleriaFotos from './GaleriaFotos';
 
 interface Props {
   inicial: PersonaDesaparecida | null;
@@ -22,7 +26,25 @@ const formatoFechaSimple = (iso?: string) => {
   return new Date(iso).toISOString().slice(0, 10);
 };
 
-export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardado, onCancelar }: Props) {
+// Captura clicks en el mapa
+function CapturadorClicks({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) { onPick(e.latlng.lat, e.latlng.lng); },
+  });
+  return null;
+}
+
+// Corrige el tamaño del mapa dentro del modal sin resize global
+function InvalidarTamano() {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 200);
+    return () => clearTimeout(t);
+  }, [map]);
+  return null;
+}
+
+export default function FormularioDesaparecida({ inicial, onGuardado, onCancelar }: Props) {
   const [form, setForm] = useState<PersonaDesaparecida>({
     documento: '',
     nombre: '',
@@ -34,7 +56,12 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
 
   const [archivo, setArchivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [seccion, setSeccion] = useState<'datos' | 'fisico' | 'circunstancias' | 'reportante'>('datos');
+  const [seccion, setSeccion] = useState<'datos' | 'fisico' | 'circunstancias' | 'reportante' | 'fotos'>('datos');
+
+  // Ubicación inline (solo coordenadas vía mapa)
+  const [ubiCoords, setUbiCoords] = useState<[number, number] | null>(null);
+  const [pickerAbierto, setPickerAbierto] = useState(false);
+  const [pickerCoords, setPickerCoords] = useState<[number, number] | null>(null);
 
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
@@ -48,6 +75,10 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
         fechaNacimiento: formatoFechaSimple(inicial.fechaNacimiento),
       });
       if (inicial.fotoUrl) setPreviewUrl(fileUrl(inicial.fotoUrl) || '');
+      // Si ya tiene ubicación, precargar sus coordenadas para mostrarlas
+      if (inicial.ultimaUbicacion?.latitud && inicial.ultimaUbicacion?.longitud) {
+        setUbiCoords([inicial.ultimaUbicacion.latitud, inicial.ultimaUbicacion.longitud]);
+      }
     }
   }, [inicial]);
 
@@ -72,6 +103,21 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
     reader.readAsDataURL(file);
   };
 
+  const pickIcon = divIcon({
+    className: 'custom-marker',
+    iconSize: [32, 42],
+    iconAnchor: [16, 32],
+    html: `<div class="marker-pin sospechoso"><span class="material-symbols-outlined">push_pin</span></div>`,
+  });
+
+  const confirmarPicker = () => {
+    if (pickerCoords) {
+      setUbiCoords(pickerCoords);
+      setPickerAbierto(false);
+      setPickerCoords(null);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr('');
@@ -79,14 +125,30 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
     setGuardando(true);
 
     try {
-      // Preparar payload
+      // Resolver ubicación: si hay coordenadas marcadas, crear la Ubicacion inline
+      let ubicacionId: number | undefined = form.ultimaUbicacion?.id;
+      if (ubiCoords) {
+        // Si las coords coinciden con la ubicación ya asociada, no recrear
+        const yaAsociada =
+          form.ultimaUbicacion?.latitud === ubiCoords[0] &&
+          form.ultimaUbicacion?.longitud === ubiCoords[1];
+        if (!yaAsociada) {
+          const ubiCreada = await ubicacionService.crear({
+            direccion: '',
+            latitud: ubiCoords[0],
+            longitud: ubiCoords[1],
+            tipo: 'OTRO',
+          } as Ubicacion);
+          ubicacionId = ubiCreada.id;
+        }
+      }
+
       const payload: PersonaDesaparecida = {
         ...form,
-        ultimaUbicacion: form.ultimaUbicacion?.id ? { id: form.ultimaUbicacion.id } as Ubicacion : null,
+        ultimaUbicacion: ubicacionId ? ({ id: ubicacionId } as Ubicacion) : null,
       };
 
       let id: number;
-
       if (inicial?.id) {
         const actualizada = await desaparecidaService.actualizar(inicial.id, payload);
         id = actualizada.id!;
@@ -95,7 +157,6 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
         id = creada.id!;
       }
 
-      // Subir foto si hay archivo nuevo
       if (archivo) {
         await desaparecidaService.subirFoto(id, archivo);
       }
@@ -112,12 +173,8 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
     <form onSubmit={submit}>
       {/* Tabs de secciones */}
       <div style={{
-        display: 'flex',
-        gap: 4,
-        marginBottom: 20,
-        borderBottom: '1px solid var(--slate-800)',
-        paddingBottom: 12,
-        flexWrap: 'wrap',
+        display: 'flex', gap: 4, marginBottom: 20,
+        borderBottom: '1px solid var(--slate-800)', paddingBottom: 12, flexWrap: 'wrap',
       }}>
         <button type="button" className={`option-chip ${seccion === 'datos' ? 'active' : ''}`}
           onClick={() => setSeccion('datos')}>1. Identificación</button>
@@ -127,32 +184,26 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
           onClick={() => setSeccion('circunstancias')}>3. Circunstancias</button>
         <button type="button" className={`option-chip ${seccion === 'reportante' ? 'active' : ''}`}
           onClick={() => setSeccion('reportante')}>4. Reportante</button>
+        <button type="button" className={`option-chip ${seccion === 'fotos' ? 'active' : ''}`}
+          onClick={() => setSeccion('fotos')}>5. Fotos</button>
       </div>
 
       {/* Sección 1: Identificación */}
       {seccion === 'datos' && (
         <>
-          {/* Foto */}
           <div style={{ marginBottom: 20, textAlign: 'center' }}>
-            <div style={{
-              display: 'inline-block',
-              position: 'relative',
-              marginBottom: 10,
-            }}>
+            <div style={{ display: 'inline-block', position: 'relative', marginBottom: 10 }}>
               {previewUrl ? (
                 <img src={previewUrl} alt="Vista previa" style={{
                   width: 150, height: 150, objectFit: 'cover',
-                  border: '2px solid var(--red-500)',
-                  borderRadius: 4,
+                  border: '2px solid var(--red-500)', borderRadius: 4,
                 }} />
               ) : (
                 <div style={{
-                  width: 150, height: 150,
-                  background: 'var(--slate-950)',
+                  width: 150, height: 150, background: 'var(--slate-950)',
                   border: '2px dashed var(--slate-700)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexDirection: 'column',
-                  color: 'var(--slate-600)',
+                  flexDirection: 'column', color: 'var(--slate-600)',
                 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 48 }}>photo_camera</span>
                   <div style={{ fontSize: 10, marginTop: 4 }}>Sin foto</div>
@@ -176,7 +227,7 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
               <label className="form-label">Documento / ID</label>
               <input value={form.documento}
                 onChange={(e) => setForm({ ...form, documento: e.target.value })}
-                placeholder="ID-000-0000" required />
+                placeholder="V-12345678" required />
             </div>
             <div className="form-group">
               <label className="form-label">Alias / Apodo</label>
@@ -208,8 +259,6 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
                 <option value="">— Seleccionar —</option>
                 <option value="MASCULINO">Masculino</option>
                 <option value="FEMENINO">Femenino</option>
-                <option value="NO_BINARIO">No binario</option>
-                <option value="OTRO">Otro</option>
               </select>
             </div>
             <div className="form-group">
@@ -298,35 +347,29 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
               onChange={(e) => setForm({ ...form, fechaDesaparicion: e.target.value })}
               required />
           </div>
+
           <div className="form-group">
-            <label className="form-label">
-              Última ubicación conocida
-              <span className="entity-counter">{ubicaciones.length}</span>
-            </label>
-            <select value={form.ultimaUbicacion?.id || ''}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                setForm({
-                  ...form,
-                  ultimaUbicacion: ubicaciones.find(u => u.id === id) || null,
-                });
+            <label className="form-label">Última ubicación conocida</label>
+            <button type="button" className="btn-secondary"
+              onClick={() => { setPickerCoords(null); setPickerAbierto(true); }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_location_alt</span>
+              {ubiCoords ? 'Cambiar ubicación en mapa' : 'Marcar en mapa'}
+            </button>
+            {ubiCoords && (
+              <div style={{
+                marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--green-600, #16A34A)',
               }}>
-              <option value="">— Sin ubicación registrada —</option>
-              {ubicaciones.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.direccion || `Ubicación #${u.id}`}
-                </option>
-              ))}
-            </select>
-            <div style={{ fontSize: 10, color: 'var(--slate-500)', marginTop: 4 }}>
-              Si la ubicación no existe, registrala primero en Ubicaciones.
-            </div>
+                ✓ {ubiCoords[0].toFixed(6)}, {ubiCoords[1].toFixed(6)}
+              </div>
+            )}
           </div>
+
           <div className="form-group">
             <label className="form-label">Circunstancias de la desaparición</label>
             <textarea rows={6} value={form.circunstancias || ''}
               onChange={(e) => setForm({ ...form, circunstancias: e.target.value })}
-              placeholder="Describí las circunstancias en las que ocurrió la desaparición: con quién estaba, qué hacía, hacia dónde se dirigía, posibles motivos, testigos, etc." />
+              placeholder="Describí las circunstancias: con quién estaba, qué hacía, hacia dónde se dirigía, testigos, etc." />
           </div>
         </div>
       )}
@@ -344,7 +387,7 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
             <label className="form-label">Teléfono de contacto</label>
             <input value={form.reportanteTelefono || ''}
               onChange={(e) => setForm({ ...form, reportanteTelefono: e.target.value })}
-              placeholder="+00 000 000 0000" />
+              placeholder="0414-1234567" />
           </div>
           <div className="form-group">
             <label className="form-label">Relación con la persona</label>
@@ -366,34 +409,94 @@ export default function FormularioDesaparecida({ inicial, ubicaciones, onGuardad
         </div>
       )}
 
+      {/* Sección 5: Fotos */}
+      {seccion === 'fotos' && (
+        <div>
+          <p style={{ color: 'var(--slate-400)', fontSize: 13, marginBottom: 16 }}>
+            La foto principal se gestiona en la sección de Identificación. Acá podés agregar
+            fotos adicionales del caso (una vez guardado).
+          </p>
+          <GaleriaFotos desaparecidaId={inicial?.id} />
+        </div>
+      )}
+
       {err && <div className="error" style={{ marginTop: 16 }}>{err}</div>}
       {ok && <div className="success" style={{ marginTop: 16 }}>{ok}</div>}
 
       <div style={{
-        display: 'flex',
-        gap: 8,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 20,
-        paddingTop: 16,
-        borderTop: '1px solid var(--slate-800)',
+        display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center',
+        marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--slate-800)',
       }}>
         <div style={{ fontSize: 11, color: 'var(--slate-500)' }}>
-          {seccion === 'datos' && 'Sección 1 de 4'}
-          {seccion === 'fisico' && 'Sección 2 de 4'}
-          {seccion === 'circunstancias' && 'Sección 3 de 4'}
-          {seccion === 'reportante' && 'Sección 4 de 4'}
+          {seccion === 'datos' && 'Sección 1 de 5'}
+          {seccion === 'fisico' && 'Sección 2 de 5'}
+          {seccion === 'circunstancias' && 'Sección 3 de 5'}
+          {seccion === 'reportante' && 'Sección 4 de 5'}
+          {seccion === 'fotos' && 'Sección 5 de 5'}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="btn-ghost" onClick={onCancelar}>
-            Cancelar
-          </button>
+          <button type="button" className="btn-ghost" onClick={onCancelar}>Cancelar</button>
           <button type="submit" className="btn-primary" disabled={guardando}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
             {guardando ? 'Guardando...' : (inicial ? 'Actualizar caso' : 'Registrar caso')}
           </button>
         </div>
       </div>
+
+      {/* Modal picker de mapa */}
+      <Modal
+        abierto={pickerAbierto}
+        onClose={() => { setPickerAbierto(false); setPickerCoords(null); }}
+        titulo="Marcar última ubicación conocida"
+        icono="add_location_alt"
+        ancho={760}
+      >
+        <p style={{ color: 'var(--slate-400)', fontSize: 12, marginBottom: 12 }}>
+          Hacé click en cualquier punto del mapa para seleccionar las coordenadas.
+        </p>
+        {pickerAbierto && (
+          <div style={{ height: 400, border: '1px solid var(--slate-800)', position: 'relative' }}>
+            <MapContainer
+              key={`picker-desap-${pickerAbierto}`}
+              center={ubiCoords || [10.45, -64.17]}
+              zoom={11}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="© OpenStreetMap"
+              />
+              <InvalidarTamano />
+              <CapturadorClicks onPick={(lat, lng) => setPickerCoords([lat, lng])} />
+              {pickerCoords && <Marker position={pickerCoords} icon={pickIcon} />}
+            </MapContainer>
+          </div>
+        )}
+        {pickerCoords && (
+          <div style={{
+            marginTop: 12, padding: 10, background: 'var(--slate-950)',
+            border: '1px solid var(--red-500)', fontFamily: 'var(--font-mono)', fontSize: 12,
+          }}>
+            <strong style={{ color: 'var(--red-500)' }}>Seleccionado: </strong>
+            <span style={{ color: 'white' }}>
+              {pickerCoords[0].toFixed(6)}, {pickerCoords[1].toFixed(6)}
+            </span>
+          </div>
+        )}
+        <div style={{
+          display: 'flex', gap: 8, justifyContent: 'flex-end',
+          marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--slate-800)',
+        }}>
+          <button type="button" className="btn-ghost"
+            onClick={() => { setPickerAbierto(false); setPickerCoords(null); }}>
+            Cancelar
+          </button>
+          <button type="button" className="btn-primary" onClick={confirmarPicker} disabled={!pickerCoords}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check</span>
+            Usar estas coordenadas
+          </button>
+        </div>
+      </Modal>
     </form>
   );
 }

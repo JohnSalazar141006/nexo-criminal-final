@@ -5,6 +5,8 @@ import { usePaginacion } from '../services/usePaginacion';
 import Paginacion from '../components/Paginacion';
 import ModalDetalle from '../components/ModalDetalle';
 import { exportarCSV } from '../services/exportar';
+import { useConfirm } from '../services/ConfirmContext';
+import { useToast } from '../services/ToastContext';
 
 const ESTADOS: EstadoAlerta[] = ['PENDIENTE', 'EN_REVISION', 'CONFIRMADA', 'DESCARTADA'];
 
@@ -36,6 +38,8 @@ export default function Alertas() {
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [filtroNivel, setFiltroNivel] = useState<string>('');
   const [detalle, setDetalle] = useState<Alerta | null>(null);
+  const confirmar = useConfirm();
+  const toast = useToast();
 
   const cargar = async () => setLista(await alertaService.listar(soloPendientes));
   useEffect(() => { cargar(); }, [soloPendientes]);
@@ -46,20 +50,39 @@ export default function Alertas() {
   };
 
   const desplegar = async (a: Alerta) => {
-    if (confirm(`¿Marcar la alerta NX-${String(a.id).padStart(5, '0')} como CONFIRMADA y desplegar respuesta?`)) {
+    const ok = await confirmar({
+      titulo: 'Desplegar respuesta',
+      mensaje: `¿Marcar la alerta NX-${String(a.id).padStart(5, '0')} como CONFIRMADA y desplegar respuesta?`,
+      textoConfirmar: 'Desplegar',
+    });
+    if (ok) {
       await cambiar(a.id, 'CONFIRMADA');
+      toast.exito(`Alerta NX-${String(a.id).padStart(5, '0')} confirmada`);
     }
   };
 
   const analizar = async (a: Alerta) => {
-    if (confirm(`¿Pasar la alerta NX-${String(a.id).padStart(5, '0')} a EN_REVISION?`)) {
+    const ok = await confirmar({
+      titulo: 'Pasar a revisión',
+      mensaje: `¿Pasar la alerta NX-${String(a.id).padStart(5, '0')} a EN_REVISION?`,
+      textoConfirmar: 'Analizar',
+    });
+    if (ok) {
       await cambiar(a.id, 'EN_REVISION');
+      toast.info(`Alerta NX-${String(a.id).padStart(5, '0')} en revisión`);
     }
   };
 
   const descartar = async (a: Alerta) => {
-    if (confirm(`¿Descartar la alerta NX-${String(a.id).padStart(5, '0')}?`)) {
+    const ok = await confirmar({
+      titulo: 'Descartar alerta',
+      mensaje: `¿Descartar la alerta NX-${String(a.id).padStart(5, '0')}?`,
+      textoConfirmar: 'Descartar',
+      peligro: true,
+    });
+    if (ok) {
       await cambiar(a.id, 'DESCARTADA');
+      toast.info(`Alerta NX-${String(a.id).padStart(5, '0')} descartada`);
     }
   };
 

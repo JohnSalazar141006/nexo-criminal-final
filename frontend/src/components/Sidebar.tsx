@@ -25,10 +25,26 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
+        {/* OPERACIÓN */}
+        <div className="nav-group-label">{t('Operación')}</div>
         <NavLink to="/" end className={link}>
           <span className="material-symbols-outlined">dashboard</span>
           {t('Panel de Control')}
         </NavLink>
+
+        {/* EVENTOS */}
+        <div className="nav-group-label">{t('Eventos')}</div>
+        <NavLink to="/sucesos" className={link}>
+          <span className="material-symbols-outlined">event_note</span>
+          {t('Sucesos')}
+        </NavLink>
+        <NavLink to="/desaparecidas" className={link}>
+          <span className="material-symbols-outlined">person_search</span>
+          {t('Personas Desaparecidas')}
+        </NavLink>
+
+        {/* ENTIDADES */}
+        <div className="nav-group-label">{t('Entidades')}</div>
         <NavLink to="/personas" className={link}>
           <span className="material-symbols-outlined">group</span>
           {t('Personas')}
@@ -41,25 +57,20 @@ export default function Sidebar() {
           <span className="material-symbols-outlined">distance</span>
           {t('Ubicaciones')}
         </NavLink>
-        <NavLink to="/sucesos" className={link}>
-          <span className="material-symbols-outlined">event_note</span>
-          {t('Sucesos')}
-        </NavLink>
+
+        {/* INTELIGENCIA */}
+        <div className="nav-group-label">{t('Inteligencia')}</div>
         <NavLink to="/alertas" className={link}>
           <span className="material-symbols-outlined">notifications_active</span>
           {t('Alertas')}
         </NavLink>
-        <NavLink to="/desaparecidas" className={link}>
-          <span className="material-symbols-outlined">person_search</span>
-          {t('Personas Desaparecidas')}
+        <NavLink to="/grafo" className={link}>
+          <span className="material-symbols-outlined">hub</span>
+          {t('Grafo Red Thread')}
         </NavLink>
         <NavLink to="/asistente-ia" className={link}>
           <span className="material-symbols-outlined">psychology</span>
           {t('Asistente IA')}
-        </NavLink>
-        <NavLink to="/grafo" className={link}>
-          <span className="material-symbols-outlined">hub</span>
-          {t('Grafo Red Thread')}
         </NavLink>
       </nav>
 

@@ -2,8 +2,11 @@ import axios, { AxiosInstance } from 'axios';
 import type {
   Persona, Vehiculo, Ubicacion, Suceso, Alerta, Vinculo,
   Relacion, UserSession, GrafoData, EstadoAlerta, PersonaDesaparecida,
-  MensajeChat, RespuestaIA
+  MensajeChat, RespuestaIA, FotoDesaparecida
 } from '../types';
+import { esSSO } from './authMode';
+import { getAccessToken } from './ssoAuth';
+
 
 const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api/v1';
 
@@ -12,9 +15,11 @@ const api: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-// Interceptor: adjunta el token JWT en cada peticion
+// Interceptor: adjunta el token JWT en cada peticion (segun el modo de auth)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('nexo_token');
+  const token = esSSO()
+    ? getAccessToken()                       // SSO: token en memoria
+    : localStorage.getItem('nexo_token');    // Local: token en localStorage
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -67,6 +72,18 @@ export const sucesoService = {
   eliminar: async (id: number): Promise<void> => { await api.delete(`/sucesos/${id}`); },
 };
 
+// ---- Robo completo (orquestador transaccional) ----
+export const roboCompletoService = {
+  registrar: async (datos: any): Promise<{ sucesoId: number; mensaje: string }> =>
+    (await api.post('/robo-completo', datos)).data,
+};
+
+// ---- Modus Operandi (catálogo) ----
+export const modusService = {
+  listar: async (): Promise<{ id: number; codigo: string; etiqueta: string; descripcion?: string }[]> =>
+    (await api.get('/modus')).data,
+};
+
 // ---- Relaciones ----
 export const relacionService = {
   listar: async (): Promise<Relacion[]> => (await api.get('/relaciones')).data,
@@ -88,6 +105,12 @@ export const engineService = {
   escolta: async () => (await api.post('/engine/escolta')).data,
   circulo: async () => (await api.post('/engine/circulo-confianza')).data,
   modus: async () => (await api.post('/engine/modus-operandi')).data,
+};
+
+export const configMotorService = {
+  obtener: () => api.get('/config/motor').then(r => r.data),
+  guardar: (config: any) => api.put('/config/motor', config).then(r => r.data),
+  restaurarDefaults: () => api.post('/config/motor/default').then(r => r.data),
 };
 
 // ---- Grafo ----
@@ -137,6 +160,27 @@ export const desaparecidaService = {
 
   cercanas: async (lat: number, lng: number, radio = 5000): Promise<PersonaDesaparecida[]> =>
     (await api.get('/desaparecidas/cercanas', { params: { lat, lng, radioMetros: radio } })).data,
+
+    // ---- Múltiples fotos ----
+  listarFotos: async (id: number): Promise<FotoDesaparecida[]> =>
+    (await api.get(`/desaparecidas/${id}/fotos`)).data,
+
+  agregarFoto: async (id: number, archivo: File): Promise<FotoDesaparecida> => {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    const { data } = await api.post(`/desaparecidas/${id}/fotos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  eliminarFoto: async (id: number, fotoId: number): Promise<void> => {
+    await api.delete(`/desaparecidas/${id}/fotos/${fotoId}`);
+  },
+
+  marcarFotoPrincipal: async (id: number, fotoId: number): Promise<void> => {
+    await api.patch(`/desaparecidas/${id}/fotos/${fotoId}/principal`);
+  },
 };
 
 // ---- IA ----
@@ -159,6 +203,9 @@ export const iaService = {
 
   reporte: async (tipo: 'desaparecida' | 'suceso' | 'alerta', id: number): Promise<RespuestaIA> =>
     (await api.post(`/ia/reporte/${tipo}/${id}`)).data,
+
+  clasificarModus: async (descripcion: string): Promise<{ codigo: string; etiqueta: string }> =>
+    (await api.post('/ia/clasificar-modus', { descripcion })).data,
 };
 
 export default api;

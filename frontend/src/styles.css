@@ -259,7 +259,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  z-index: 40;
+  z-index: 1000;
 }
 
 .search-box {
@@ -1211,7 +1211,7 @@ td.right { text-align: right; }
   border: 1px solid var(--slate-700);
   max-height: 400px;
   overflow-y: auto;
-  z-index: 100;
+  z-index: 1001;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -1901,13 +1901,14 @@ tbody tr:hover .table-actions { opacity: 1; }
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  z-index: 200;
+  z-index: 9000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   backdrop-filter: blur(4px);
 }
+
 
 .modal {
   background: var(--slate-900);
@@ -2678,4 +2679,25 @@ html[data-tema="claro"] .toolbar .btn-ghost:hover { background: #F1F5F9; }
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--slate-600);
+  padding: 16px 16px 6px;
+  margin-top: 4px;
+}
+
+/* El primer encabezado no necesita tanto margen arriba */
+.sidebar-nav .nav-group-label:first-child {
+  margin-top: 0;
+  padding-top: 4px;
 }

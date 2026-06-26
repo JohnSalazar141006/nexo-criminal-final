@@ -17,9 +17,14 @@ import ModalDetalle from '../components/ModalDetalle';
 import ModalConfirmar from '../components/ModalConfirmar';
 import Modal from '../components/Modal';
 import { exportarCSV } from '../services/exportar';
+import FormVehiculo from '../components/FormVehiculo';
 
 const ESTADOS: EstadoVehiculo[] = [
   'NORMAL', 'ROBADO', 'RECUPERADO', 'DESAPARECIDO', 'BAJO_OBSERVACION', 'VEHICULO_APOYO',
+];
+
+const ESTADOS_SELECCIONABLES: EstadoVehiculo[] = [
+  'ROBADO', 'RECUPERADO', 'DESAPARECIDO', 'BAJO_OBSERVACION',
 ];
 
 const COLORES: Record<string, string> = {
@@ -46,19 +51,16 @@ interface Avistamiento {
 
 export default function Vehiculos() {
   const [lista, setLista] = useState<Vehiculo[]>([]);
-  const [personas, setPersonas] = useState<Persona[]>([]);
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [sucesos, setSucesos] = useState<Suceso[]>([]);
   const [puntos, setPuntos] = useState<PuntoMapa[]>([]);
   const [filtro, setFiltro] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('');
-  const [form, setForm] = useState<Vehiculo>({
-    placa: '', marca: '', modelo: '', estado: 'NORMAL',
-  });
   const [err, setErr] = useState('');
   const [ok, setOk] = useState('');
   const [detalle, setDetalle] = useState<Vehiculo | null>(null);
   const [aEliminar, setAEliminar] = useState<Vehiculo | null>(null);
+  const [editando, setEditando] = useState<Vehiculo | null>(null);
   const [avistamientosVehiculo, setAvistamientosVehiculo] = useState<Avistamiento[]>([]);
   const [avAbierto, setAvAbierto] = useState(false);
   const [avForm, setAvForm] = useState<{ ubicacionId: string; fechaHora: string; fuente: string }>({
@@ -68,35 +70,19 @@ export default function Vehiculos() {
   });
 
   const cargar = async () => {
-    let vList: Vehiculo[] = [];
-    let pList: Persona[] = [];
-    let uList: Ubicacion[] = [];
     let sList: Suceso[] = [];
-
     try {
-      vList = await vehiculoService.listar();
-      setLista(vList);
+      setLista(await vehiculoService.listar());
     } catch (e) {
       console.error('Error cargando vehiculos:', e);
       setLista([]);
     }
-
     try {
-      pList = await personaService.listar();
-      setPersonas(pList);
-    } catch (e) {
-      console.error('Error cargando personas:', e);
-      setPersonas([]);
-    }
-
-    try {
-      uList = await ubicacionService.listar();
-      setUbicaciones(uList);
+      setUbicaciones(await ubicacionService.listar());
     } catch (e) {
       console.error('Error cargando ubicaciones:', e);
       setUbicaciones([]);
     }
-
     try {
       sList = await sucesoService.listar();
       setSucesos(sList);
@@ -132,21 +118,6 @@ export default function Vehiculos() {
   useEffect(() => {
     cargar();
   }, []);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr('');
-    setOk('');
-    try {
-      await vehiculoService.crear(form);
-      setForm({ placa: '', marca: '', modelo: '', estado: 'NORMAL' });
-      setOk('Vehículo registrado correctamente');
-      setTimeout(() => setOk(''), 3000);
-      await cargar();
-    } catch (e: any) {
-      setErr(e?.response?.data?.error || 'Error al guardar');
-    }
-  };
 
   const cambiarEstado = async (id: number, estado: EstadoVehiculo) => {
     await vehiculoService.cambiarEstado(id, estado);
@@ -192,7 +163,6 @@ export default function Vehiculos() {
         fechaHora: new Date().toISOString().slice(0, 16),
         fuente: 'CAMARA_URBANA',
       });
-      // Recargar avistamientos
       const { data } = await api.get(`/avistamientos/vehiculo/${detalle.id}`);
       setAvistamientosVehiculo(data);
       setOk('Avistamiento registrado');
@@ -210,6 +180,7 @@ export default function Vehiculos() {
         Modelo: v.modelo,
         Anio: v.anio || '',
         Color: v.color || '',
+        Chasis: v.chasis || '',
         Estado: estadoLabel(v.estado),
         Propietario: v.propietario ? `${v.propietario.nombre} ${v.propietario.apellido}` : '',
       })),
@@ -258,112 +229,18 @@ export default function Vehiculos() {
 
       <div className="toolbar">
         <button className="btn-ghost" onClick={exportar}>
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-            download
-          </span>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>download</span>
           Exportar CSV
         </button>
       </div>
 
-      {/* Bento */}
-      <div className="bento-grid">
-        <div className="bento-col-5">
-          <div className="form-card" style={{ height: '100%' }}>
-            <div className="card-header" style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 20 }}>
-              <span className="material-symbols-outlined">app_registration</span>
-              <h3 className="card-title">Registrar nuevo vehículo</h3>
-            </div>
-            <form onSubmit={submit}>
-              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                <div className="form-group full">
-                  <label className="form-label">Placa (ID Único)</label>
-                  <input
-                    value={form.placa}
-                    onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })}
-                    placeholder="ABC-1234"
-                    required
-                    style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Marca</label>
-                  <input
-                    value={form.marca}
-                    onChange={(e) => setForm({ ...form, marca: e.target.value })}
-                    placeholder="Toyota"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Modelo</label>
-                  <input
-                    value={form.modelo}
-                    onChange={(e) => setForm({ ...form, modelo: e.target.value })}
-                    placeholder="Hilux"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Año</label>
-                  <input
-                    type="number"
-                    value={form.anio || ''}
-                    onChange={(e) =>
-                      setForm({ ...form, anio: Number(e.target.value) || undefined })
-                    }
-                    placeholder="2024"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Color</label>
-                  <select
-                    value={form.color || ''}
-                    onChange={(e) => setForm({ ...form, color: e.target.value })}
-                  >
-                    <option value="">Seleccioná</option>
-                    {Object.keys(COLORES).map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group full">
-                  <label className="form-label">
-                    Propietario
-                    <span className="entity-counter">{personas.length}</span>
-                  </label>
-                  <select
-                    value={form.propietario?.id || ''}
-                    onChange={(e) => {
-                      const id = Number(e.target.value);
-                      setForm({
-                        ...form,
-                        propietario: personas.find((p) => p.id === id) || null,
-                      });
-                    }}
-                  >
-                    <option value="">— Sin propietario —</option>
-                    {personas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre} {p.apellido} ({p.documento})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {err && <div className="error">{err}</div>}
-              {ok && <div className="success">{ok}</div>}
-              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: 16 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                  add_circle
-                </span>
-                Crear Registro
-              </button>
-            </form>
-          </div>
-        </div>
+      {ok && <div className="success" style={{ marginBottom: 16 }}>{ok}</div>}
+      {err && <div className="error" style={{ marginBottom: 16 }}>{err}</div>}
 
-        <div className="bento-col-7">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, height: '100%' }}>
+      {/* Mapa + stats (sin formulario: los vehiculos se crean desde Sucesos) */}
+      <div className="bento-grid">
+        <div className="bento-col-12" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <MapaTactical
               puntos={puntos}
               altura={300}
@@ -371,7 +248,6 @@ export default function Vehiculos() {
               hudValor={`${puntos.length} puntos detectados`}
               emptyMessage="Sin robos georreferenciados"
             />
-
             <div className="mini-stats">
               <div className="mini-stat">
                 <div className="mini-stat-label">Flota total</div>
@@ -394,7 +270,7 @@ export default function Vehiculos() {
       </div>
 
       {/* Tabla */}
-      <div className="table-wrap">
+      <div className="table-wrap" style={{ marginTop: 20 }}>
         <div className="table-header">
           <div className="table-header-title">
             <span className="material-symbols-outlined">database</span>
@@ -500,12 +376,24 @@ export default function Vehiculos() {
                           visibility
                         </span>
                       </button>
+                      <button
+                        className="btn-icon"
+                        onClick={() => setEditando(v)}
+                        title="Editar"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                          edit
+                        </span>
+                      </button>
                       <select
                         value={v.estado}
                         onChange={(e) => cambiarEstado(v.id!, e.target.value as EstadoVehiculo)}
                         style={{ width: 140, fontSize: 11, padding: '6px 24px 6px 10px' }}
                       >
-                        {ESTADOS.map((e) => (
+                        {Array.from(new Set([
+                          ...(v.estado ? [v.estado] : []),
+                          ...ESTADOS_SELECCIONABLES,
+                        ])).map((e) => (
                           <option key={e} value={e}>
                             {estadoLabel(e as EstadoVehiculo)}
                           </option>
@@ -543,6 +431,29 @@ export default function Vehiculos() {
         />
       </div>
 
+      {/* Modal Editar vehiculo */}
+      <Modal
+        abierto={editando !== null}
+        onClose={() => setEditando(null)}
+        titulo="Editar vehículo"
+        icono="edit"
+        ancho={620}
+      >
+        <FormVehiculo
+          key={editando?.id ?? 'editar'}
+          vehiculoInicial={editando}
+          mostrarPropietario
+          onGuardado={() => {
+            setEditando(null);
+            setOk('Vehículo actualizado correctamente');
+            setTimeout(() => setOk(''), 3000);
+            cargar();
+          }}
+          onCancelar={() => setEditando(null)}
+          textoGuardar="Actualizar registro"
+        />
+      </Modal>
+
       {/* Modal Detalle Vehículo */}
       {detalle && (
         <ModalDetalle
@@ -566,6 +477,7 @@ export default function Vehiculos() {
           }
           campos={[
             { etiqueta: 'Placa', valor: detalle.placa, mono: true, destacado: true },
+            { etiqueta: 'Chasis', valor: detalle.chasis || '—', mono: true },
             { etiqueta: 'Marca', valor: detalle.marca },
             { etiqueta: 'Modelo', valor: detalle.modelo },
             { etiqueta: 'Año', valor: detalle.anio?.toString() || '—' },
@@ -585,6 +497,23 @@ export default function Vehiculos() {
           ]}
           extra={
             <div>
+              {detalle.declaracion && (
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{
+                    fontSize: 11, color: 'var(--slate-500)', textTransform: 'uppercase',
+                    letterSpacing: '0.1em', margin: '0 0 8px',
+                  }}>
+                    Declaración
+                  </h4>
+                  <div style={{
+                    padding: 12, background: 'var(--slate-950)',
+                    border: '1px solid var(--slate-800)', fontSize: 13,
+                    color: 'var(--slate-300)', lineHeight: 1.6,
+                  }}>
+                    {detalle.declaracion}
+                  </div>
+                </div>
+              )}
               <h4
                 style={{
                   fontSize: 11,
@@ -609,7 +538,6 @@ export default function Vehiculos() {
                   Registrar avistamiento
                 </button>
               </h4>
-
               {avistamientosVehiculo.length === 0 ? (
                 <div
                   style={{
@@ -694,7 +622,6 @@ export default function Vehiculos() {
                 {detalle.marca} {detalle.modelo}
               </div>
             </div>
-
             <div className="form-group" style={{ marginBottom: 14 }}>
               <label className="form-label">Ubicación del avistamiento</label>
               <select
@@ -709,7 +636,6 @@ export default function Vehiculos() {
                 ))}
               </select>
             </div>
-
             <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               <div className="form-group">
                 <label className="form-label">Fecha y hora</label>
@@ -733,7 +659,6 @@ export default function Vehiculos() {
                 </select>
               </div>
             </div>
-
             <div
               style={{
                 display: 'flex',

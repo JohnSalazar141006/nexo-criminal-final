@@ -71,4 +71,14 @@ public class IAController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/clasificar-modus")
+    public ResponseEntity<?> clasificarModus(@RequestBody Map<String, String> body) {
+        try {
+            String descripcion = body.get("descripcion");
+            return ResponseEntity.ok(iaService.clasificarModus(descripcion));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

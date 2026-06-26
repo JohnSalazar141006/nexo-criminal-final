@@ -34,6 +34,7 @@ public class IAService {
     private final PersonaDesaparecidaService desaparecidaService;
     private final PersonaDesaparecidaRepository desaparecidaRepository;
     private final AlertaRepository alertaRepository;
+    private final com.nexocriminal.modus.ModusOperandiService modusService;
 
     private static final String SYSTEM_BASE = """
             Eres un asistente especializado en inteligencia criminal del sistema Nexo Criminal.
@@ -267,6 +268,72 @@ public class IAService {
         prompt.append("Incluí una sección de recomendaciones concretas para los investigadores.");
 
         return claudeClient.preguntar(SYSTEM_BASE, prompt.toString());
+    }
+
+    /**
+     * 5. Clasifica una descripción de hecho en un código de modus operandi del catálogo.
+     * La IA SOLO puede elegir entre los códigos existentes; si la respuesta no es
+     * un código válido, cae a OTRO. Esto garantiza que el motor pueda matchear.
+     */
+    public java.util.Map<String, String> clasificarModus(String descripcion) {
+        var catalogo = modusService.listarActivos();
+
+        if (descripcion == null || descripcion.isBlank()) {
+            return java.util.Map.of("codigo", "OTRO", "etiqueta", "Otro");
+        }
+
+        // Construir la lista de códigos válidos para el prompt y para validar
+        StringBuilder lista = new StringBuilder();
+        java.util.Set<String> codigosValidos = new java.util.HashSet<>();
+        for (var m : catalogo) {
+            codigosValidos.add(m.getCodigo());
+            lista.append("- ").append(m.getCodigo())
+                 .append(": ").append(m.getEtiqueta());
+            if (m.getDescripcion() != null && !m.getDescripcion().isBlank()) {
+                lista.append(" (").append(m.getDescripcion()).append(")");
+            }
+            lista.append("\n");
+        }
+
+        String system = """
+                Sos un clasificador de modus operandi para un sistema de inteligencia criminal.
+                Tu única tarea es leer la descripción de un hecho delictivo y elegir el código
+                de modus operandi que mejor lo describe, de una lista cerrada.
+                Respondé ÚNICAMENTE con el código exacto (en mayúsculas, tal como aparece en la lista),
+                sin explicación, sin puntuación, sin texto adicional.
+                Si ninguno encaja con razonable certeza, respondé OTRO.
+                """;
+
+        String prompt = "DESCRIPCIÓN DEL HECHO:\n" + descripcion + "\n\n" +
+                "CÓDIGOS DISPONIBLES:\n" + lista + "\n" +
+                "Respondé solo con el código que corresponde.";
+
+        String codigo;
+        try {
+            RespuestaIA r = claudeClient.preguntar(system, prompt);
+            codigo = r.getContenido() != null ? r.getContenido().trim().toUpperCase() : "";
+            // Limpiar: dejar solo el primer token tipo CODIGO (letras, números, guion bajo)
+            var matcher = java.util.regex.Pattern.compile("[A-Z0-9_]+").matcher(codigo);
+            codigo = matcher.find() ? matcher.group() : "";
+        } catch (Exception e) {
+            log.warn("Error al clasificar modus con IA: {}", e.getMessage());
+            codigo = "";
+        }
+
+        // VALIDACIÓN CLAVE: el código debe existir en el catálogo. Si no, OTRO.
+        if (!codigosValidos.contains(codigo)) {
+            codigo = "OTRO";
+        }
+
+        // Buscar la etiqueta para devolverla
+        final String codigoFinal = codigo;
+        String etiqueta = catalogo.stream()
+                .filter(m -> m.getCodigo().equals(codigoFinal))
+                .map(m -> m.getEtiqueta())
+                .findFirst()
+                .orElse("Otro");
+
+        return java.util.Map.of("codigo", codigoFinal, "etiqueta", etiqueta);
     }
 
     /**

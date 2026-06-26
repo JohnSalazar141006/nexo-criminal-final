@@ -8,6 +8,7 @@ import com.nexocriminal.domain.ubicacion.Ubicacion;
 import com.nexocriminal.domain.ubicacion.UbicacionRepository;
 import com.nexocriminal.domain.vinculo.Vinculo;
 import com.nexocriminal.domain.vinculo.VinculoRepository;
+import com.nexocriminal.config.ConfiguracionMotorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,18 +35,7 @@ public class ReglaClusterDesapariciones implements ReglaVinculo {
     private final UbicacionRepository ubicacionRepository;
     private final VinculoRepository vinculoRepository;
     private final AlertaRepository alertaRepository;
-
-    @Value("${nexo.engine.desaparicion.radio-cluster-metros:1500}")
-    private int radioCluster;
-
-    @Value("${nexo.engine.desaparicion.min-cluster:3}")
-    private int minCluster;
-
-    @Value("${nexo.engine.desaparicion.ventana-dias:30}")
-    private int ventanaDias;
-
-    @Value("${nexo.engine.desaparicion.radio-nodo-sospechoso:1000}")
-    private int radioNodoSospechoso;
+    private final ConfiguracionMotorService configService;
 
     @Override
     public String nombre() {
@@ -54,6 +44,12 @@ public class ReglaClusterDesapariciones implements ReglaVinculo {
 
     @Override
     public ResultadoRegla ejecutar() {
+        var cfg = configService.obtener();
+        int radioCluster = cfg.getClusterRadioMetros();
+        int minCluster = cfg.getClusterMin();
+        int ventanaDias = cfg.getClusterVentanaDias();
+        int radioNodoSospechoso = cfg.getClusterRadioNodoSospechoso();
+
         log.info("Ejecutando {} (radio cluster={}m, min={}, ventana={}d)",
                 nombre(), radioCluster, minCluster, ventanaDias);
 

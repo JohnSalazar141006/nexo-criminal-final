@@ -7,6 +7,7 @@ import com.nexocriminal.domain.suceso.Suceso;
 import com.nexocriminal.domain.suceso.SucesoRepository;
 import com.nexocriminal.domain.vinculo.Vinculo;
 import com.nexocriminal.domain.vinculo.VinculoRepository;
+import com.nexocriminal.config.ConfiguracionMotorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,9 +37,7 @@ public class ReglaSimilitudModusOperandi implements ReglaVinculo {
     private final SucesoRepository sucesoRepository;
     private final VinculoRepository vinculoRepository;
     private final JpaRepository<Alerta, Long> alertaRepository;
-
-    @Value("${nexo.engine.modus.umbral:0.75}")
-    private double umbral;
+    private final ConfiguracionMotorService configService;
 
     @Override
     public String nombre() {
@@ -47,6 +46,9 @@ public class ReglaSimilitudModusOperandi implements ReglaVinculo {
 
     @Override
     public ResultadoRegla ejecutar() {
+        var cfg = configService.obtener();
+        double umbral = cfg.getModusUmbral();
+
         log.info("Ejecutando {} (umbral={})", nombre(), umbral);
 
         List<Vinculo> vinculos = new ArrayList<>();
