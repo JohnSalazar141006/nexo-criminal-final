@@ -21,7 +21,7 @@ type ModalAbierto =
   | null | 'configuracion' | 'manual' | 'tutorial'
   | 'api' | 'perfil' | 'password';
 
-type TabConfig = 'general' | 'notifs' | 'motor';
+type TabConfig = 'general' | 'motor';
 
 export default function TopBar() {
   const { t } = usePrefs();
