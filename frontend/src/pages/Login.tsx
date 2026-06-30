@@ -6,7 +6,7 @@ import { esSSO } from '../services/authMode';
 import { redirigirALogin } from '../services/ssoAuth';
 
 export default function Login() {
-  const [username, setUsername] = useState('admin2');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [err, setErr] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -118,7 +118,7 @@ export default function Login() {
         </button>
 
         <div className="login-hint">
-          DEMO ACCESS: <strong>admin2</strong> / <strong>admin123</strong>
+          DEMO ACCESS: <strong>admin</strong> / <strong>admin123</strong>
         </div>
       </form>
     </div>
