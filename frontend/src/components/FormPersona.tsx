@@ -43,8 +43,7 @@ export default function FormPersona({
   const [err, setErr] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setErr('');
     setGuardando(true);
     try {
@@ -67,7 +66,7 @@ export default function FormPersona({
   };
 
   return (
-    <form onSubmit={submit}>
+    <div>
       <div className="form-grid">
         <div className="form-group">
           <label className="form-label">Documento / ID</label>
@@ -135,11 +134,11 @@ export default function FormPersona({
             Cancelar
           </button>
         )}
-        <button type="submit" className="btn-primary" disabled={guardando}>
+        <button type="button" className="btn-primary" disabled={guardando} onClick={submit}>
           <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
           {guardando ? 'Guardando...' : (textoGuardar ?? (editando ? 'Actualizar registro' : 'Guardar en base de datos'))}
         </button>
       </div>
-    </form>
+    </div>
   );
 }
