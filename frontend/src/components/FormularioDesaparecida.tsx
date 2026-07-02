@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { desaparecidaService, ubicacionService } from '../services/api';
+import { desaparecidaService, ubicacionService, personaService } from '../services/api';
 import { fileUrl } from '../services/files';
 import type {
   PersonaDesaparecida, EstadoDesaparicion, PrioridadDesaparicion, Ubicacion,
@@ -155,6 +155,20 @@ export default function FormularioDesaparecida({ inicial, onGuardado, onCancelar
       } else {
         const creada = await desaparecidaService.crear(payload);
         id = creada.id!;
+        // Crear también una Persona con rol VICTIMA (espejo de la desaparecida)
+        try {
+          await personaService.crear({
+            documento: form.documento,
+            nombre: form.nombre,
+            apellido: form.apellido,
+            alias: form.alias,
+            fechaNacimiento: form.fechaNacimiento || undefined,
+            rol: 'VICTIMA',
+          } as any);
+        } catch (ePersona) {
+          console.error('No se pudo crear la Persona espejo:', ePersona);
+          // No frenamos el flujo: la desaparecida ya se creó
+        }
       }
 
       if (archivo) {
