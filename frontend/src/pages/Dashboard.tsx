@@ -37,7 +37,7 @@ export default function Dashboard() {
         personas: pers.length,
         vehiculos: veh.length,
         robados: robs.length,
-        sucesos: suc.length,
+        sucesos: suc.length + desap.length,
         ubicaciones: ubis.length,
         sospechosas: ubis.filter((u) => u.nodoSospechoso).length,
         alertas: al.length,
