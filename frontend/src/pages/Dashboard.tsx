@@ -103,14 +103,14 @@ export default function Dashboard() {
           <div className="stat-change muted">{t('Click para ver detalle')}</div>
         </div>
 
-        <div className="stat-card" onClick={() => nav('/desaparecidas')} style={{ cursor: 'pointer' }}>
+        <div className="stat-card danger" onClick={() => nav('/desaparecidas')} style={{ cursor: 'pointer' }}>
           <div className="stat-card-top">
             <span className="stat-label">{t('Personas desaparecidas')}</span>
             <span className="stat-icon">
               <span className="material-symbols-outlined">person_search</span>
             </span>
           </div>
-          <div className="stat-value">{stats.desaparecidas.toLocaleString('es-ES')}</div>
+          <div className="stat-value danger">{stats.desaparecidas.toLocaleString('es-ES')}</div>
           <div className="stat-change muted">{t('Casos registrados')}</div>
         </div>
 
