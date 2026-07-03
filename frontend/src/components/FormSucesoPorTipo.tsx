@@ -43,6 +43,7 @@ export default function FormSucesoPorTipo({ onGuardado }: Props) {
         <div className="form-group" style={{ marginBottom: 16 }}>
           <label className="form-label">Fecha y hora</label>
           <input type="datetime-local" value={fechaHora}
+            max={new Date().toISOString().slice(0, 16)}
             onChange={(e) => setFechaHora(e.target.value)} required />
         </div>
       )}
