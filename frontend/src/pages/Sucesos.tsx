@@ -15,6 +15,8 @@ import ModalConfirmar from '../components/ModalConfirmar';
 import { exportarCSV } from '../services/exportar';
 import FormSucesoPorTipo from '../components/FormSucesoPorTipo';
 import GaleriaFotos from '../components/GaleriaFotos';
+import Modal from '../components/Modal';
+import FormularioDesaparecida from '../components/FormularioDesaparecida';
 
 const TIPOS: TipoSuceso[] = ['ROBO_VEHICULO', 'DESAPARICION', 'AVISTAMIENTO', 'TRANSACCION'];
 const tipoLabel: Record<string, string> = {
@@ -30,6 +32,8 @@ const estadoDesapLabel: Record<string, string> = {
   ENCONTRADA_FALLECIDA: 'Encontrada fallecida',
   ARCHIVADA: 'Archivada',
 };
+
+const [editandoDesap, setEditandoDesap] = useState<PersonaDesaparecida | null>(null);
 
 /**
  * Fila unificada de la tabla: puede ser un suceso o una desaparicion.
@@ -161,8 +165,9 @@ export default function Sucesos() {
     );
   };
 
-  const puntos: PuntoMapa[] = useMemo(
-    () => sucesos.filter(s => s.ubicacion?.latitud && s.ubicacion?.longitud)
+  const puntos: PuntoMapa[] = useMemo(() => {
+    const deSucesos: PuntoMapa[] = sucesos
+      .filter(s => s.ubicacion?.latitud && s.ubicacion?.longitud)
       .map(s => ({
         id: s.id!, lat: s.ubicacion!.latitud, lng: s.ubicacion!.longitud,
         tipo: 'SUCESO',
@@ -175,7 +180,23 @@ export default function Sucesos() {
           { etiqueta: 'Víctima', valor: s.victima ? `${s.victima.nombre} ${s.victima.apellido}` : '—' },
           { etiqueta: 'Modus', valor: s.modusOperandi || '—' },
         ],
-      })), [sucesos]);
+      }));
+    const deDesap: PuntoMapa[] = desaparecidas
+      .filter(d => d.ultimaUbicacion?.latitud && d.ultimaUbicacion?.longitud)
+      .map(d => ({
+        id: d.id!, lat: d.ultimaUbicacion!.latitud, lng: d.ultimaUbicacion!.longitud,
+        tipo: 'DESAPARECIDA',
+        titulo: `${d.nombre} ${d.apellido}`,
+        subtitulo: `DS-${String(d.id).padStart(4, '0')}`,
+        sospechoso: d.prioridad === 'CRITICA' || d.prioridad === 'ALTA',
+        campos: [
+          { etiqueta: 'Documento', valor: d.documento },
+          { etiqueta: 'Estado', valor: estadoDesapLabel[d.estado] || d.estado },
+          { etiqueta: 'Fecha', valor: new Date(d.fechaDesaparicion).toLocaleString('es-ES') },
+        ],
+      }));
+    return [...deSucesos, ...deDesap];
+  }, [sucesos, desaparecidas]);
 
   const totalRegistros = sucesos.length + desaparecidas.length;
   const ultimaSemana = todas.filter(f => {
@@ -236,7 +257,7 @@ export default function Sucesos() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, height: '100%' }}>
             <MapaTactical puntos={puntos} altura={300}
               hudLabel="Mapa de sucesos"
-              hudValor={`${puntos.length} de ${sucesos.length} con ubicación`}
+              hudValor={`${puntos.length} ubicaciones en el mapa`}
               emptyMessage="Sin sucesos georreferenciados" />
             <div className="mini-stats">
               <div className="mini-stat" style={{ borderLeft: '4px solid var(--red-500)' }}>
@@ -357,6 +378,11 @@ export default function Sucesos() {
                       <button className="btn-icon" onClick={() => setDetalle(f)} title="Ver detalle">
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>visibility</span>
                       </button>
+                      {f._origen === 'desaparicion' && f.desaparecida && (
+                        <button className="btn-icon" onClick={() => setEditandoDesap(f.desaparecida!)} title="Editar">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+                        </button>
+                      )}
                       <button className="btn-icon danger" onClick={() => setAEliminar(f)} title="Eliminar">
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
                       </button>
@@ -469,6 +495,28 @@ export default function Sucesos() {
           }
         />
       )}
+
+      <Modal
+        abierto={!!editandoDesap}
+        onClose={() => setEditandoDesap(null)}
+        titulo="Editar caso de desaparición"
+        icono="person_search"
+        ancho={780}
+      >
+        {editandoDesap && (
+          <FormularioDesaparecida
+            inicial={editandoDesap}
+            ubicaciones={ubicaciones}
+            onGuardado={() => {
+              setEditandoDesap(null);
+              setOk('Caso actualizado correctamente');
+              setTimeout(() => setOk(''), 3000);
+              cargar();
+            }}
+            onCancelar={() => setEditandoDesap(null)}
+          />
+        )}
+      </Modal>
 
       <ModalConfirmar abierto={!!aEliminar} titulo="¿Eliminar registro?"
         mensaje={aEliminar
