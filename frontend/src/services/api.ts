@@ -69,6 +69,8 @@ export const sucesoService = {
   listar: async (tipo?: string): Promise<Suceso[]> =>
     (await api.get('/sucesos', { params: tipo ? { tipo } : {} })).data,
   crear: async (s: Suceso): Promise<Suceso> => (await api.post('/sucesos', s)).data,
+  actualizar: async (id: number, s: Partial<Suceso>): Promise<Suceso> =>
+    (await api.put(`/sucesos/${id}`, s)).data,
   eliminar: async (id: number): Promise<void> => { await api.delete(`/sucesos/${id}`); },
 };
 

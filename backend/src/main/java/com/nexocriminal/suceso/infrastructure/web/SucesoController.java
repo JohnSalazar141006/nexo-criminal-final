@@ -5,6 +5,7 @@ import com.nexocriminal.suceso.application.CreateSuceso;
 import com.nexocriminal.suceso.application.DeleteSuceso;
 import com.nexocriminal.suceso.application.GetSuceso;
 import com.nexocriminal.suceso.application.ListSucesos;
+import com.nexocriminal.suceso.application.UpdateSuceso;
 import com.nexocriminal.suceso.domain.model.Suceso;
 import com.nexocriminal.suceso.domain.port.PersonaReaderPort;
 import com.nexocriminal.suceso.domain.port.UbicacionReaderPort;
@@ -29,18 +30,20 @@ public class SucesoController {
     private final CreateSuceso createSuceso;
     private final ListSucesos listSucesos;
     private final GetSuceso getSuceso;
+    private final UpdateSuceso updateSuceso;
     private final DeleteSuceso deleteSuceso;
     private final VehiculoReaderPort vehiculoReader;
     private final PersonaReaderPort personaReader;
     private final UbicacionReaderPort ubicacionReader;
 
     public SucesoController(CreateSuceso createSuceso, ListSucesos listSucesos,
-                            GetSuceso getSuceso, DeleteSuceso deleteSuceso,
+                            GetSuceso getSuceso, UpdateSuceso updateSuceso, DeleteSuceso deleteSuceso,
                             VehiculoReaderPort vehiculoReader, PersonaReaderPort personaReader,
                             UbicacionReaderPort ubicacionReader) {
         this.createSuceso = createSuceso;
         this.listSucesos = listSucesos;
         this.getSuceso = getSuceso;
+        this.updateSuceso = updateSuceso;
         this.deleteSuceso = deleteSuceso;
         this.vehiculoReader = vehiculoReader;
         this.personaReader = personaReader;
@@ -100,5 +103,13 @@ public class SucesoController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         deleteSuceso.execute(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public SucesoResponse actualizar(@PathVariable Long id, @RequestBody SucesoRequest req) {
+        Suceso actualizado = updateSuceso.execute(
+                id, req.getTipo(), req.getFechaHora(),
+                req.getModusOperandi(), req.getDescripcion());
+        return toResponse(actualizado);
     }
 }

@@ -34,6 +34,8 @@ const estadoDesapLabel: Record<string, string> = {
 };
 
 const [editandoDesap, setEditandoDesap] = useState<PersonaDesaparecida | null>(null);
+const [editandoSuceso, setEditandoSuceso] = useState<Suceso | null>(null);
+const [formSuceso, setFormSuceso] = useState({ fechaHora: '', modusOperandi: '', descripcion: '' });
 
 /**
  * Fila unificada de la tabla: puede ser un suceso o una desaparicion.
@@ -206,6 +208,33 @@ export default function Sucesos() {
   const robos = sucesos.filter(s => s.tipo === 'ROBO_VEHICULO').length;
   const desapCount = desaparecidas.length;
 
+  const abrirEditarSuceso = (s: Suceso) => {
+    setEditandoSuceso(s);
+    setFormSuceso({
+      fechaHora: s.fechaHora ? new Date(s.fechaHora).toISOString().slice(0, 16) : '',
+      modusOperandi: s.modusOperandi || '',
+      descripcion: s.descripcion || '',
+    });
+  };
+
+  const guardarEdicionSuceso = async () => {
+    if (!editandoSuceso) return;
+    try {
+      await sucesoService.actualizar(editandoSuceso.id!, {
+        tipo: editandoSuceso.tipo,
+        fechaHora: formSuceso.fechaHora,
+        modusOperandi: formSuceso.modusOperandi,
+        descripcion: formSuceso.descripcion,
+      } as any);
+      setEditandoSuceso(null);
+      setOk('Suceso actualizado correctamente');
+      setTimeout(() => setOk(''), 3000);
+      await cargar();
+    } catch (e: any) {
+      setErr(e?.response?.data?.error || 'No se pudo actualizar el suceso');
+    }
+  };
+
   const limpiarFiltros = () => {
     setFiltro(''); setFiltroTipo(''); setFiltroVehiculo('');
     setFiltroPersona(''); setFiltroUbicacion('');
@@ -214,6 +243,7 @@ export default function Sucesos() {
 
   const idEtiqueta = (f: FilaUnificada) =>
     f._origen === 'suceso' ? `EV-${String(f.id).padStart(4, '0')}` : `DS-${String(f.id).padStart(4, '0')}`;
+
 
   return (
     <>
@@ -383,6 +413,11 @@ export default function Sucesos() {
                           <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
                         </button>
                       )}
+                      {f._origen === 'suceso' && f.suceso && (
+                        <button className="btn-icon" onClick={() => abrirEditarSuceso(f.suceso!)} title="Editar">
+                          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>edit</span>
+                        </button>
+                      )}
                       <button className="btn-icon danger" onClick={() => setAEliminar(f)} title="Eliminar">
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
                       </button>
@@ -515,6 +550,48 @@ export default function Sucesos() {
             }}
             onCancelar={() => setEditandoDesap(null)}
           />
+        )}
+      </Modal>
+
+      <Modal
+        abierto={!!editandoSuceso}
+        onClose={() => setEditandoSuceso(null)}
+        titulo="Editar suceso"
+        icono="edit"
+        ancho={560}
+      >
+        {editandoSuceso && (
+          <div>
+            <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--slate-500)' }}>
+              Editando {tipoLabel[editandoSuceso.tipo]} · EV-{String(editandoSuceso.id).padStart(4, '0')}.
+              El vehículo, la víctima y la ubicación no se modifican acá.
+            </div>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Fecha y hora</label>
+              <input type="datetime-local" value={formSuceso.fechaHora}
+                max={new Date().toISOString().slice(0, 16)}
+                onChange={(e) => setFormSuceso({ ...formSuceso, fechaHora: e.target.value })} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Modus operandi</label>
+              <input value={formSuceso.modusOperandi}
+                onChange={(e) => setFormSuceso({ ...formSuceso, modusOperandi: e.target.value })}
+                placeholder="Descripción breve del modus" />
+            </div>
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Descripción</label>
+              <textarea rows={4} value={formSuceso.descripcion}
+                onChange={(e) => setFormSuceso({ ...formSuceso, descripcion: e.target.value })}
+                placeholder="Descripción detallada del suceso" />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn-ghost" onClick={() => setEditandoSuceso(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={guardarEdicionSuceso}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>save</span>
+                Guardar cambios
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
 
