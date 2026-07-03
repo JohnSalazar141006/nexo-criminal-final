@@ -33,10 +33,6 @@ const estadoDesapLabel: Record<string, string> = {
   ARCHIVADA: 'Archivada',
 };
 
-const [editandoDesap, setEditandoDesap] = useState<PersonaDesaparecida | null>(null);
-const [editandoSuceso, setEditandoSuceso] = useState<Suceso | null>(null);
-const [formSuceso, setFormSuceso] = useState({ fechaHora: '', modusOperandi: '', descripcion: '' });
-
 /**
  * Fila unificada de la tabla: puede ser un suceso o una desaparicion.
  * Se marca con _origen para ramificar las acciones (ver/eliminar).
@@ -71,6 +67,9 @@ export default function Sucesos() {
   const [err, setErr] = useState('');
   const [detalle, setDetalle] = useState<FilaUnificada | null>(null);
   const [aEliminar, setAEliminar] = useState<FilaUnificada | null>(null);
+  const [editandoDesap, setEditandoDesap] = useState<PersonaDesaparecida | null>(null);
+  const [editandoSuceso, setEditandoSuceso] = useState<Suceso | null>(null);
+  const [formSuceso, setFormSuceso] = useState({ fechaHora: '', modusOperandi: '', descripcion: '' });
 
   const cargar = async () => {
     try { setSucesos(await sucesoService.listar()); } catch (e) { console.error('Sucesos:', e); }
