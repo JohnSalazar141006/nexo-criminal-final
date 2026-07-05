@@ -1,86 +1,110 @@
 package com.nexocriminal.files;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Servicio de almacenamiento de imagenes. Sube las fotos a Cloudinary, que
+ * las sirve desde una URL publica permanente (sobrevive a reinicios del backend,
+ * a diferencia del disco local que es efimero en Render).
+ */
 @Service
 public class FileStorageService {
 
-    @Value("${nexo.uploads.directorio:uploads}")
-    private String uploadDir;
+    @Value("${nexo.cloudinary.cloud-name:}")
+    private String cloudName;
+
+    @Value("${nexo.cloudinary.api-key:}")
+    private String apiKey;
+
+    @Value("${nexo.cloudinary.api-secret:}")
+    private String apiSecret;
+
+    private Cloudinary cloudinary;
 
     @PostConstruct
     public void init() {
-        try {
-            Path root = Paths.get(uploadDir);
-            if (!Files.exists(root)) {
-                Files.createDirectories(root);
-            }
-            Path desaparecidasDir = root.resolve("desaparecidas");
-            if (!Files.exists(desaparecidasDir)) {
-                Files.createDirectories(desaparecidasDir);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("No se pudo crear el directorio de uploads", e);
+        if (cloudName == null || cloudName.isBlank()) {
+            System.err.println("[Cloudinary] ADVERTENCIA: credenciales no configuradas. La subida de fotos fallara.");
+            return;
         }
+        this.cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", cloudName,
+                "api_key", apiKey,
+                "api_secret", apiSecret,
+                "secure", true
+        ));
     }
 
     /**
-     * Guarda un archivo y retorna la URL relativa para acceder.
+     * Sube una imagen a Cloudinary y retorna la URL publica permanente.
+     * Mantiene la misma firma que la version anterior para no romper llamadas.
      */
     public String guardarFotoDesaparecida(MultipartFile archivo) {
         if (archivo.isEmpty()) {
             throw new IllegalArgumentException("El archivo está vacío");
         }
 
-        // Validar que sea imagen
         String contentType = archivo.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("Solo se aceptan archivos de imagen");
         }
 
-        // Validar tamaño (max 5MB)
         if (archivo.getSize() > 5 * 1024 * 1024) {
             throw new IllegalArgumentException("La imagen no puede superar los 5MB");
         }
 
+        if (cloudinary == null) {
+            throw new RuntimeException("Cloudinary no está configurado (faltan credenciales)");
+        }
+
         try {
-            String original = archivo.getOriginalFilename();
-            String extension = (original != null && original.contains("."))
-                    ? original.substring(original.lastIndexOf("."))
-                    : ".jpg";
-
-            String nombreUnico = UUID.randomUUID().toString() + extension;
-
-            Path destino = Paths.get(uploadDir).resolve("desaparecidas").resolve(nombreUnico);
-            Files.copy(archivo.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-
-            // URL relativa que servirá Spring
-            return "/files/desaparecidas/" + nombreUnico;
-        } catch (IOException e) {
-            throw new RuntimeException("Error al guardar el archivo", e);
+            // public_id unico dentro de una carpeta 'desaparecidas'
+            String publicId = "desaparecidas/" + UUID.randomUUID();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resultado = cloudinary.uploader().upload(
+                    archivo.getBytes(),
+                    ObjectUtils.asMap(
+                            "public_id", publicId,
+                            "resource_type", "image"
+                    )
+            );
+            // La URL segura y permanente de la imagen
+            Object secureUrl = resultado.get("secure_url");
+            if (secureUrl == null) {
+                throw new RuntimeException("Cloudinary no devolvió la URL de la imagen");
+            }
+            return secureUrl.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al subir la imagen a Cloudinary: " + e.getMessage(), e);
         }
     }
 
-    public void eliminarArchivo(String urlRelativa) {
-        if (urlRelativa == null || !urlRelativa.startsWith("/files/")) return;
-
-        String relativa = urlRelativa.replace("/files/", "");
-        Path ruta = Paths.get(uploadDir).resolve(relativa);
+    /**
+     * Elimina una imagen de Cloudinary a partir de su URL.
+     * Extrae el public_id de la URL y llama a destroy.
+     */
+    public void eliminarArchivo(String url) {
+        if (url == null || cloudinary == null || !url.contains("cloudinary.com")) return;
         try {
-            Files.deleteIfExists(ruta);
-        } catch (IOException e) {
-            // Log pero no romper
-            System.err.println("No se pudo eliminar archivo: " + ruta);
+            // Extraer el public_id de la URL de Cloudinary.
+            // Formato: https://res.cloudinary.com/<cloud>/image/upload/v123/desaparecidas/uuid.jpg
+            String sinExtension = url.substring(0, url.lastIndexOf('.'));
+            int idx = sinExtension.indexOf("/upload/");
+            if (idx == -1) return;
+            String despuesUpload = sinExtension.substring(idx + "/upload/".length());
+            // Quitar el prefijo de version (v123456789/)
+            String publicId = despuesUpload.replaceFirst("^v\\d+/", "");
+            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        } catch (Exception e) {
+            System.err.println("No se pudo eliminar la imagen de Cloudinary: " + e.getMessage());
         }
     }
 }
