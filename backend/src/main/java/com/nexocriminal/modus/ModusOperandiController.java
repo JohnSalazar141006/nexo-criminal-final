@@ -2,9 +2,11 @@ package com.nexocriminal.modus;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 
+@Tag(name = "Modus Operandi", description = "Catálogo de modus operandi para clasificar sucesos")
 @RestController
 @RequestMapping("/api/v1/modus")
 @RequiredArgsConstructor
