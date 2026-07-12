@@ -1,195 +1,231 @@
-# 🧵 Nexo Criminal — The Red Thread
+# Nexo Criminal — The Red Thread
 
 ### Sistema de Inteligencia de Vínculos para Análisis Criminal
 
 > *"Ningún crimen ocurre en el vacío. Detrás de cada delito hay un hilo que lo conecta con otros. Nexo Criminal encuentra ese hilo."*
 
----
-
-## 📌 Descripción General
-
-**Nexo Criminal** es una plataforma de inteligencia criminal que aplica el concepto de **The Red Thread (El Hilo Rojo)** para descubrir vínculos no evidentes entre personas, vehículos, lugares y sucesos delictivos. El sistema está diseñado como herramienta táctica para analistas de inteligencia, investigadores de desapariciones y operadores de monitoreo urbano.
-
-A diferencia de los sistemas tradicionales de registro policial —que almacenan hechos de forma aislada— Nexo Criminal **enhebra** los datos: cruza coordenadas, tiempos, relaciones sociales, patrones de movimiento y modus operandi para revelar la estructura oculta del crimen organizado.
-
-### Ejes del sistema
-
-1. **Robo de vehículos** — detección de nodos logísticos (deshuesaderos), vehículos de apoyo (escoltas/mulas) y patrones de modus operandi compartidos entre bandas.
-2. **Personas desaparecidas** — reconstrucción del círculo de confianza de la víctima, identificación de intermediarios críticos y detección de puntos de contacto geográficos comunes.
+Proyecto académico desarrollado para la asignatura **Sistemas de Información II** de la **Licenciatura en Informática**, Universidad de Oriente (UDO), Núcleo Nueva Esparta. Desarrollado por el **Equipo Amarillo**.
 
 ---
 
-## 🎯 Objetivos
+## Descripción general
 
-### Objetivo general
+**Nexo Criminal** es una plataforma de inteligencia criminal que aplica el concepto de *The Red Thread* (El Hilo Rojo) para descubrir vínculos no evidentes entre personas, vehículos, ubicaciones y sucesos delictivos. A diferencia de un registro policial tradicional —que almacena hechos de forma aislada— el sistema cruza coordenadas, tiempos, relaciones sociales y modus operandi para revelar la estructura oculta detrás del crimen.
 
-Construir una plataforma de análisis de vínculos criminales que permita a los cuerpos de investigación descubrir relaciones ocultas entre entidades (personas, vehículos, ubicaciones y sucesos) mediante el cruce automático de datos y visualización en grafos.
+El sistema se organiza en torno a dos ejes de investigación:
 
-### Objetivos específicos
+1. **Robo de vehículos** — detección de nodos logísticos, vehículos de apoyo (escoltas) y patrones de modus operandi compartidos entre bandas.
+2. **Personas desaparecidas** — reconstrucción del círculo de confianza de la víctima, identificación de intermediarios y detección de puntos de contacto geográficos comunes.
 
-- Registrar y normalizar información sobre vehículos robados, personas desaparecidas, sospechosos y sucesos criminales.
-- Detectar automáticamente vínculos comunes entre entidades mediante reglas de negocio (proximidad temporal, proximidad geográfica, relaciones sociales, modus operandi).
-- Visualizar los vínculos descubiertos en forma de grafo de nodos y aristas (el "hilo rojo").
-- Generar alertas proactivas cuando se detectan patrones sospechosos (nodos logísticos, vehículos de escolta, puntos de contacto).
-- Ofrecer un MVP funcional en 4 semanas que sirva como base escalable para futuras expansiones.
+El proyecto se encuentra **desplegado y funcionando en producción**.
 
 ---
 
-## 🧩 Módulos del Sistema
+## Enlaces del sistema en producción
 
-| Módulo | Responsabilidad |
+| Recurso | URL |
 |---|---|
-| **Gestión de Entidades** | CRUD de Personas, Vehículos, Ubicaciones, Sucesos. |
-| **Motor de Vínculos (Red Thread Engine)** | Algoritmos que descubren relaciones entre entidades. |
-| **Alertas Inteligentes** | Notificaciones automáticas cuando se detecta un patrón sospechoso. |
-| **Visualización de Grafos** | Interfaz frontend que muestra los vínculos como red interactiva. |
-| **Similitud de Modus Operandi** | Agrupa casos por método delictivo compartido. |
-| **Reportes y Exportación** | Generación de informes para la fiscalía o unidades tácticas. |
+| Aplicación web (frontend) | https://nexo-criminal-web-final.onrender.com |
+| API REST (backend) | https://nexo-criminal-api-final.onrender.com |
+| Documentación de la API (Swagger) | https://nexo-criminal-api-final.onrender.com/swagger-ui.html |
+
+Credenciales de demostración: usuario `admin`, contraseña `admin123`.
+
+> Nota: el backend está desplegado en el plan gratuito de Render, por lo que tras un período de inactividad puede tardar unos segundos en responder la primera petición (arranque en frío).
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Stack tecnológico
 
 ### Backend
-- **Java 17+** — lenguaje principal del backend.
-- **Spring Boot 3.x** — framework de aplicación.
-- **Spring Data JPA** — persistencia.
-- **Spring Security** — autenticación y autorización.
-- **IntelliJ IDEA Community Edition** — IDE de desarrollo.
+- **Java 17** — lenguaje principal.
+- **Spring Boot 3.2.5** — framework de aplicación.
+- **Spring Data JPA / Hibernate** — persistencia.
+- **Spring Security + JWT** — autenticación por token.
+- **springdoc-openapi (Swagger UI)** — documentación interactiva de la API.
+- **Cloudinary** — almacenamiento persistente de imágenes.
+- **Maven** — gestión de dependencias y construcción.
 
 ### Frontend
 - **TypeScript** — tipado estricto.
-- **React 18+** — framework de UI.
-- **Vite** — bundler rápido.
-- **Cytoscape.js** — visualización de grafos.
-- **NestJS** — BFF (Backend for Frontend) opcional.
+- **React 18** — biblioteca de interfaz de usuario.
+- **Vite** — bundler y servidor de desarrollo.
+- **React Router** — enrutamiento de la SPA.
+- **Leaflet / React-Leaflet** — mapas tácticos con coordenadas reales.
+- **Cytoscape.js** — visualización del grafo de vínculos.
 
-### Scripts y Procesamiento
-- **Python 3.11+** — scripts de ETL, carga masiva, simulación de datasets.
+### Base de datos
+- **PostgreSQL** — base de datos relacional.
 
-### Base de Datos
-- **PostgreSQL 15+** — base de datos relacional principal.
-- **Extensión PostGIS** — para consultas geoespaciales.
+### Inteligencia artificial
+- **Claude (Anthropic)** — análisis de zonas de búsqueda, generación de reportes y clasificación de modus operandi.
 
-### Herramientas de Gestión
-- **GitHub** — control de versiones, ramas, pull requests.
-- **Scrum** — metodología ágil (sprints de 1 semana).
-- **Markdown (.md)** — toda la documentación del proyecto.
+### Infraestructura y despliegue
+- **Render** — hosting de la base de datos, el backend (servicio Docker) y el frontend (sitio estático).
+- **Docker** — contenedor del backend.
+- **GitHub / GitHub Actions** — control de versiones e integración continua.
 
 ---
 
-## 📂 Estructura del Proyecto
+## Arquitectura
+
+El backend sigue los principios de **Arquitectura Limpia (Clean Architecture)** con un enfoque **hexagonal (puertos y adaptadores)**, organizado por dominios de negocio. Cada dominio separa claramente sus capas:
+
+- **`domain/model`** — modelos de dominio (POJOs puros, sin dependencias de frameworks). Contienen la lógica de negocio.
+- **`domain/port`** — puertos: interfaces que definen las operaciones que el dominio necesita (abstracciones).
+- **`application`** — casos de uso: una clase por operación (Create, Read, Update, Delete y operaciones específicas).
+- **`infrastructure/persistence`** — adaptadores de persistencia: implementan los puertos usando JPA, más los *mappers* entre dominio y entidad.
+- **`infrastructure/web`** — controladores REST y DTOs de entrada/salida.
+
+Esta separación garantiza que la lógica de negocio **no dependa de detalles de implementación**: los casos de uso dependen de puertos (interfaces), y son los adaptadores concretos los que dependen del dominio, nunca al revés. Cambiar la base de datos o el framework web no obliga a tocar la lógica de negocio.
+
+### Principios y patrones aplicados
+
+- **SOLID** — SRP (servicios orquestadores con una responsabilidad), OCP (fuentes de datos extensibles), LSP (adaptadores sustituibles), ISP (puertos de lectura pequeños y específicos), DIP (dependencia de abstracciones vía puertos).
+- **Patrones de diseño** — Adapter (adaptadores de repositorio), Strategy (estrategias de fuentes de datos), Factory (creación de estrategias).
+
+### Motor Red Thread
+
+El corazón analítico del sistema. Aplica reglas heurísticas para detectar vínculos ocultos entre entidades:
+
+- **Nodo logístico** — concentración sospechosa de vehículos en una zona y ventana temporal.
+- **Escolta vehicular** — vehículos que se mueven en coordinación.
+- **Círculo de confianza** — caminos de relación social entre víctima y sospechoso.
+- **Modus operandi** — similitud de método entre distintos sucesos.
+- **Clúster de desapariciones** — agrupamiento geográfico de casos.
+
+Los vínculos detectados se visualizan como un grafo interactivo (el "hilo rojo") y generan alertas proactivas.
+
+---
+
+## Estructura del proyecto
 
 ```
 nexo-criminal/
-├── README.md                      # Este archivo
-├── docs/                          # Documentación completa
-│   ├── 01-MVP.md
-│   ├── 02-casos-de-uso.md
-│   ├── 03-historias-de-usuario.md
-│   ├── 04-modelo-de-datos.md
-│   ├── 05-arquitectura.md
-│   ├── 06-scrum-plan.md
-│   ├── 07-git-workflow.md
-│   ├── 08-glosario.md
-│   └── 09-manifiesto-agil.md
-├── diagramas/                     # Diagramas en Mermaid
-│   ├── arquitectura.md
-│   ├── modelo-er.md
-│   └── flujo-red-thread.md
-├── database/                      # Scripts SQL
-│   ├── 01-schema.sql
-│   └── 02-datos-ejemplo.sql
-├── backend/                       # Spring Boot (Java)
+├── README.md
+├── backend/                         # Spring Boot (Java 17)
+│   ├── Dockerfile
 │   ├── pom.xml
-│   └── src/main/...
-├── frontend/                      # React + TypeScript
-│   ├── package.json
-│   └── src/...
-└── scripts/                       # Python ETL / simulador
-    ├── generar_datos.py
-    └── requirements.txt
+│   └── src/main/java/com/nexocriminal/
+│       ├── persona/                 # Dominio Persona (hexagonal)
+│       │   ├── application/         #   casos de uso
+│       │   ├── domain/model|port/   #   modelo y puertos
+│       │   └── infrastructure/      #   web + persistencia
+│       ├── vehiculo/                # Dominio Vehículo
+│       ├── suceso/                  # Dominio Suceso
+│       ├── desaparecida/            # Dominio Desaparecida
+│       ├── ubicacion/               # Dominio Ubicación
+│       ├── alerta/                  # Dominio Alerta
+│       ├── vinculo/                 # Dominio Vínculo
+│       ├── engine/                  # Motor Red Thread
+│       ├── robo/                    # Registro transaccional de robos
+│       ├── ia/                      # Integración con IA (Claude)
+│       ├── grafo/                   # Generación del grafo
+│       ├── fuentes/                 # Fuentes de datos externas
+│       ├── modus/                   # Catálogo de modus operandi
+│       ├── config/                  # Configuración (OpenAPI, motor)
+│       ├── files/                   # Almacenamiento de archivos (Cloudinary)
+│       └── security/                # JWT, autenticación, filtros
+│
+└── frontend/                        # React + TypeScript + Vite
+    ├── package.json
+    └── src/
+        ├── pages/                   # Vistas (Dashboard, Personas, etc.)
+        ├── components/              # Componentes reutilizables
+        ├── services/               # Cliente API, utilidades
+        └── types/                   # Tipos TypeScript
 ```
 
 ---
 
-## 🚀 Entregable (Factibilidad)
+## Módulos y funcionalidades
 
-Según lo acordado en la clase del miércoles 22/04, el entregable de factibilidad incluye:
-
-1. Este documento principal (`README.md`).
-2. Documentación detallada en `docs/`.
-3. Producto Mínimo Viable (MVP) funcional por al menos **4 semanas**.
-4. Repositorio GitHub con estrategia de ramas definida.
-5. Primeras historias de usuario listas para el sprint planning del viernes.
+| Módulo | Descripción |
+|---|---|
+| **Dashboard** | Panel de operaciones con estadísticas y acceso al motor. |
+| **Personas** | Gestión de personas, roles, relaciones sociales y búsqueda de intermediarios. |
+| **Vehículos** | Registro de vehículos y control de estado (robado, recuperado). |
+| **Sucesos** | Registro de robos, avistamientos y transacciones, con edición y mapa. |
+| **Desaparecidas** | Casos de desaparición con galería de fotos, prioridad y estado. |
+| **Ubicaciones** | Gestión de coordenadas geográficas. |
+| **Alertas** | Alertas generadas por el motor Red Thread. |
+| **Asistente IA** | Chat y análisis asistido con IA. |
+| **Grafo** | Visualización interactiva de la red de vínculos. |
 
 ---
 
-## ⚡ Quickstart
+## Ejecución local
+
+### Requisitos previos
+- Java 17 o superior
+- Maven
+- Node.js 18 o superior
+- PostgreSQL
 
 ### 1. Base de datos
-```bash
-psql -U postgres -f database/01-schema.sql
-psql -U postgres -d nexo_criminal -f database/02-datos-ejemplo.sql
-```
+Crear una base de datos PostgreSQL local llamada `nexo_criminal`. El esquema se genera automáticamente al iniciar el backend (Hibernate `ddl-auto=update`).
 
 ### 2. Backend
 ```bash
 cd backend
-./mvnw spring-boot:run
-# API en http://localhost:8080
+mvn spring-boot:run
+# API disponible en http://localhost:8080
+# Swagger en http://localhost:8080/swagger-ui.html
 ```
 
-### 3. Scripts Python (generar datos simulados)
-```bash
-cd scripts
-pip install -r requirements.txt
-python generar_datos.py
-```
+Variables de entorno relevantes (con valores por defecto para desarrollo local en `application.properties`):
 
-### 4. Frontend
+| Variable | Descripción |
+|---|---|
+| `DATABASE_URL` | URL JDBC de PostgreSQL |
+| `DATABASE_USERNAME` / `DATABASE_PASSWORD` | Credenciales de la base |
+| `JWT_SECRET` | Clave para firmar los tokens JWT |
+| `ANTHROPIC_API_KEY` | Clave de la API de IA (opcional) |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Credenciales de Cloudinary para las fotos |
+| `CORS_ORIGINS` | Orígenes permitidos para CORS |
+
+### 3. Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
-# UI en http://localhost:5173
+# UI disponible en http://localhost:5173
 ```
 
----
+Variable de entorno del frontend:
 
-## 👥 Equipo
-
-| Rol | Responsable |
+| Variable | Descripción |
 |---|---|
-| Scrum Master / Líder Sprint 1 | *Por definir el viernes* |
-| Product Owner | *Por definir* |
-| Backend (Java/Spring) | *Por asignar* |
-| Frontend (React) | *Por asignar* |
-| Scripts/DB (Python/PostgreSQL) | *Por asignar* |
-
-Correo grupal del equipo: *pendiente de creación*.
+| `VITE_API_URL` | URL base del backend (vacía en local para usar el proxy de Vite) |
 
 ---
 
-## 📅 Cronograma
+## Documentación de la API
 
-| Semana | Hito |
+La API está documentada con **Swagger / OpenAPI**. Con el backend en ejecución, la interfaz interactiva está disponible en `/swagger-ui.html`. Para probar los endpoints protegidos:
+
+1. Ejecutar `POST /api/v1/auth/login` con las credenciales.
+2. Copiar el `token` de la respuesta.
+3. Pulsar **Authorize** (candado) e ingresar el token.
+4. A partir de ahí, todas las peticiones incluyen el token JWT.
+
+---
+
+## Equipo Amarillo
+
+Asignatura: Sistemas de Información II — Licenciatura en Informática.
+Universidad de Oriente (UDO), Núcleo Nueva Esparta.
+
+| Integrante | Rol |
 |---|---|
-| Semana 1 | Factibilidad, MVP definido, primer sprint planning. |
-| Semana 2 | Sprint 1 — CRUD de entidades y base de datos. |
-| Semana 3 | Sprint 2 — Motor de vínculos (Casos A y C). |
-| Semana 4 | Sprint 3 — Visualización de grafo y alertas. Demo final. |
+| John Salazar | Líder general / Scrum Master |
+| Valeria García | Scrum Master |
+| Isaac Carreño | Scrum Master |
+| Santiago Ramírez | Scrum Master |
+| Manuel Rodríguez | Tech Lead / Scrum Master |
 
 ---
 
-## 📖 Lecturas recomendadas
-
-- Manifiesto Ágil y sus 12 principios.
-- Literatura sobre Scrum.
-- Software altamente escalable (patrones de microservicios, caching, colas).
-
----
-
-## 📜 Licencia
+## Licencia
 
 Proyecto académico. Uso restringido a fines educativos.
