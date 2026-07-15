@@ -72,6 +72,8 @@ export const sucesoService = {
   actualizar: async (id: number, s: Partial<Suceso>): Promise<Suceso> =>
     (await api.put(`/sucesos/${id}`, s)).data,
   eliminar: async (id: number): Promise<void> => { await api.delete(`/sucesos/${id}`); },
+  enviarACian: async (id: number): Promise<any> =>
+    (await api.post(`/sucesos/${id}/enviar-cian`)).data,
 };
 
 // ---- Robo completo (orquestador transaccional) ----
@@ -183,6 +185,9 @@ export const desaparecidaService = {
   marcarFotoPrincipal: async (id: number, fotoId: number): Promise<void> => {
     await api.patch(`/desaparecidas/${id}/fotos/${fotoId}/principal`);
   },
+
+  enviarACian: async (id: number): Promise<any> =>
+    (await api.post(`/desaparecidas/${id}/enviar-cian`)).data,
 };
 
 // ---- IA ----

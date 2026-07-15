@@ -387,4 +387,69 @@ public class IAService {
 
         return ctx.toString();
     }
+
+    /**
+     * Analiza un suceso y determina la prioridad para el sistema de patrullas (Cian).
+     * Devuelve exactamente uno de: LOW, MEDIUM, HIGH.
+     */
+    public String calcularPrioridadIncidente(Long sucesoId) {
+        Suceso s = sucesoService.obtener(sucesoId);
+
+        String system = """
+                Eres un clasificador de prioridad para despacho de patrullas policiales.
+                Analiza un suceso criminal y devuelve su prioridad de atención.
+                Respondé ÚNICAMENTE con una palabra en mayúsculas: LOW, MEDIUM o HIGH.
+                No agregues explicación ni ningún otro texto.
+                Criterio: HIGH para hechos violentos, en curso o con riesgo a personas;
+                MEDIUM para delitos contra la propiedad ya consumados; LOW para hechos menores o antiguos.
+                """;
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Clasificá la prioridad de este suceso:\n");
+        prompt.append("- Tipo: ").append(s.getTipo()).append("\n");
+        if (s.getDescripcion() != null) prompt.append("- Descripción: ").append(s.getDescripcion()).append("\n");
+        if (s.getModusOperandi() != null) prompt.append("- Modus operandi: ").append(s.getModusOperandi()).append("\n");
+        prompt.append("\nRespondé solo con LOW, MEDIUM o HIGH.");
+
+        RespuestaIA r = claudeClient.preguntar(system, prompt.toString());
+        String salida = r.getContenido() != null ? r.getContenido().trim().toUpperCase() : "";
+
+        // Normalizar: quedarnos solo con una de las tres etiquetas validas
+        if (salida.contains("HIGH")) return "HIGH";
+        if (salida.contains("LOW")) return "LOW";
+        return "MEDIUM"; // valor seguro por defecto
+    }
+
+    /**
+     * Calcula la prioridad de una desaparición para el despacho de patrullas (Cian).
+     * Devuelve LOW, MEDIUM o HIGH.
+     */
+    public String calcularPrioridadDesaparicion(Long desaparecidaId) {
+        PersonaDesaparecida pd = desaparecidaService.obtener(desaparecidaId);
+
+        String system = """
+                Sos un clasificador de prioridad para despacho de patrullas policiales.
+                Analizás un caso de persona desaparecida y devolvés su prioridad de atención.
+                Respondé ÚNICAMENTE con una palabra en mayúsculas: LOW, MEDIUM o HIGH.
+                No agregues explicación ni ningún otro texto.
+                Criterio: HIGH para desapariciones recientes, menores de edad o con circunstancias
+                de riesgo; MEDIUM para casos activos sin riesgo inmediato evidente; LOW para casos
+                antiguos o archivados.
+                """;
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Clasificá la prioridad de esta desaparición:\n");
+        prompt.append("- Nombre: ").append(pd.getNombre()).append(" ").append(pd.getApellido()).append("\n");
+        prompt.append("- Prioridad interna registrada: ").append(pd.getPrioridad()).append("\n");
+        prompt.append("- Estado: ").append(pd.getEstado()).append("\n");
+        prompt.append("- Fecha desaparición: ").append(pd.getFechaDesaparicion()).append("\n");
+        if (pd.getCircunstancias() != null) prompt.append("- Circunstancias: ").append(pd.getCircunstancias()).append("\n");
+        prompt.append("\nRespondé solo con LOW, MEDIUM o HIGH.");
+
+        RespuestaIA r = claudeClient.preguntar(system, prompt.toString());
+        String salida = r.getContenido() != null ? r.getContenido().trim().toUpperCase() : "";
+        if (salida.contains("HIGH")) return "HIGH";
+        if (salida.contains("LOW")) return "LOW";
+        return "MEDIUM";
+    }
 }
