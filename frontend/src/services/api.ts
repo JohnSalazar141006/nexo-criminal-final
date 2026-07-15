@@ -215,4 +215,10 @@ export const iaService = {
     (await api.post('/ia/clasificar-modus', { descripcion })).data,
 };
 
+// ---- Testimonios (integración Naranja) ----
+export const testimonioService = {
+  procesar: async (documento: string, texto: string, fecha: string): Promise<any> =>
+    (await api.post('/testimonios/procesar', { documento, texto, fecha })).data,
+};
+
 export default api;

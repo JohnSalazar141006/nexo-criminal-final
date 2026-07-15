@@ -452,4 +452,62 @@ public class IAService {
         if (salida.contains("LOW")) return "LOW";
         return "MEDIUM";
     }
+
+    /**
+     * Procesa el texto de un testimonio (transcripción de Naranja) y extrae
+     * campos estructurados usando IA. Devuelve un Map con los campos que la IA
+     * pudo identificar. Si la IA falla, devuelve un mapa con error.
+     */
+    public java.util.Map<String, String> extraerCamposTestimonio(String texto) {
+        if (texto == null || texto.isBlank()) {
+            return java.util.Map.of("error", "El texto del testimonio está vacío");
+        }
+
+        String system = """
+                Sos un analista de inteligencia criminal. Te dan la transcripción de un
+                testimonio (texto plano) y tu tarea es extraer datos estructurados de un
+                posible suceso criminal.
+                Respondé ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después,
+                sin markdown, con exactamente estas claves (usá cadena vacía si no aplica):
+                {
+                  "tipoSugerido": "ROBO_VEHICULO | AVISTAMIENTO | TRANSACCION | DESAPARICION | OTRO",
+                  "modusOperandi": "breve descripción del método usado, si se menciona",
+                  "descripcion": "resumen objetivo de los hechos relatados",
+                  "ubicacionMencionada": "lugar o dirección que se mencione, si hay",
+                  "personasMencionadas": "nombres o alias mencionados, separados por coma"
+                }
+                No inventes datos: si algo no está en el testimonio, dejá la cadena vacía.
+                """;
+
+        String prompt = "TRANSCRIPCIÓN DEL TESTIMONIO:\n" + texto +
+                "\n\nExtraé los campos y respondé solo con el JSON.";
+
+        try {
+            RespuestaIA r = claudeClient.preguntar(system, prompt);
+            String salida = r.getContenido() != null ? r.getContenido().trim() : "";
+
+            // Blindaje: extraer solo el bloque JSON (desde la primera { hasta la última })
+            int ini = salida.indexOf('{');
+            int fin = salida.lastIndexOf('}');
+            if (ini < 0 || fin < 0 || fin <= ini) {
+                return java.util.Map.of("error", "La IA no devolvió un JSON válido",
+                        "respuestaCruda", salida);
+            }
+            String json = salida.substring(ini, fin + 1);
+
+            // Parsear el JSON a un Map<String,String>
+            com.fasterxml.jackson.databind.ObjectMapper mapper =
+                    new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(json);
+
+            java.util.Map<String, String> campos = new java.util.HashMap<>();
+            node.fieldNames().forEachRemaining(k ->
+                    campos.put(k, node.get(k).asText("")));
+            return campos;
+
+        } catch (Exception e) {
+            log.warn("Error al extraer campos del testimonio: {}", e.getMessage());
+            return java.util.Map.of("error", "No se pudo procesar el testimonio: " + e.getMessage());
+        }
+    }
 }
