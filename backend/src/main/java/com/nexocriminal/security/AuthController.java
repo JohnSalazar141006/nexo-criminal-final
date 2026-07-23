@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.Map;
 
@@ -22,6 +23,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    @Operation(summary = "Iniciar sesión", description = "Valida las credenciales y devuelve un token JWT con el rol del usuario")
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
         Usuario user = usuarioRepository.findByUsername(req.getUsername())
@@ -43,6 +45,7 @@ public class AuthController {
         ));
     }
 
+    @Operation(summary = "Registrar usuario", description = "Crea un usuario nuevo con rol ANALISTA por defecto")
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@Valid @RequestBody RegistroRequest req) {
         if (usuarioRepository.findByUsername(req.getUsername()).isPresent()) {
@@ -63,6 +66,7 @@ public class AuthController {
         ));
     }
 
+    @Operation(summary = "Cambiar contraseña", description = "Cambia la contraseña de un usuario validando la actual")
     @PostMapping("/cambiar-password")
     public ResponseEntity<?> cambiarPassword(@RequestBody Map<String, String> body) {
         String username = body.get("username");
@@ -94,6 +98,39 @@ public class AuthController {
         usuarioRepository.save(user);
 
         return ResponseEntity.ok(Map.of("ok", "Contraseña actualizada correctamente"));
+    }
+
+    /**
+     * DEMOSTRACION DE COMPATIBILIDAD SSO.
+     *
+     * Genera un token JWT firmado con el mismo secreto y algoritmo (HS256) que
+     * usa el Auth Service del SSO centralizado. Sirve para demostrar que este
+     * sistema valida correctamente los tokens emitidos por el login unico:
+     * si un token firmado con el secreto compartido es aceptado en los endpoints
+     * protegidos, entonces un token real del Auth Service tambien lo sera.
+     */
+    @Operation(summary = "[DEMO SSO] Generar token estilo SSO",
+               description = "Genera un JWT firmado con el secreto compartido, simulando el que emitiría "
+                           + "el Auth Service del login centralizado. Solo para demostrar la compatibilidad SSO.")
+    @PostMapping("/sso-token-demo")
+    public ResponseEntity<?> ssoTokenDemo(@RequestBody(required = false) Map<String, String> body) {
+        String username = (body != null && body.get("username") != null && !body.get("username").isBlank())
+                ? body.get("username")
+                : "usuario.sso";
+        String rol = (body != null && body.get("rol") != null && !body.get("rol").isBlank())
+                ? body.get("rol").toUpperCase()
+                : "ANALISTA";
+
+        // Se firma con el MISMO JwtService (mismo secreto, mismo HS256) que valida el resto del sistema
+        String token = jwtService.generarToken(username, rol);
+
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "username", username,
+                "rol", rol,
+                "nota", "Token estilo SSO firmado con el secreto compartido (HS256). "
+                      + "Usalo como 'Authorization: Bearer <token>' para probar la validacion."
+        ));
     }
 
     @Data
