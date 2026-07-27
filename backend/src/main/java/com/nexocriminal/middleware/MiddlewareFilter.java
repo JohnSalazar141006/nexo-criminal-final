@@ -29,6 +29,7 @@ public class MiddlewareFilter extends OncePerRequestFilter {
     private static final List<String> RUTAS_PUBLICAS = List.of(
             "/api/v1/auth/login",
             "/api/v1/auth/registrar",
+            "/api/v1/auth/sso-token-demo",
             "/files/"
     );
 
@@ -45,9 +46,16 @@ public class MiddlewareFilter extends OncePerRequestFilter {
         boolean esConsultaPersonasPublica =
                 path.startsWith("/api/v1/personas") && "GET".equalsIgnoreCase(metodo);
 
+        // Excepción para el equipo Naranja: el POST de testimonios es público
+        // (nos envían la transcripción y devolvemos los campos extraídos por IA)
+        boolean esProcesarTestimonioPublico =
+                path.startsWith("/api/v1/testimonios") && "POST".equalsIgnoreCase(metodo);
+
         // Las rutas públicas se saltan la cadena
         boolean esPublica = RUTAS_PUBLICAS.stream().anyMatch(path::startsWith);
-        if (esPublica || esConsultaPersonasPublica || !path.startsWith("/api/")) {
+
+        if (esPublica || esConsultaPersonasPublica || esProcesarTestimonioPublico
+                || !path.startsWith("/api/")) {
             filterChain.doFilter(request, response);
             return;
         }
