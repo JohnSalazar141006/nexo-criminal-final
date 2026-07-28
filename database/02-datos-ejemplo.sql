@@ -1,87 +1,158 @@
--- =====================================================================
--- NEXO CRIMINAL - Datos de ejemplo para demo
--- Ciudad ficticia: Coordenadas aproximadas Miami FL
--- =====================================================================
+-- ============================================================================
+-- Nexo Criminal - Datos de ejemplo (15 sucesos con vinculos detectables)
+-- ============================================================================
+-- Este script llena la base con datos DISENADOS para que el motor Red Thread
+-- descubra vinculos: nodos logisticos, vehiculos escolta, intermediarios y
+-- modus operandi compartido. Coordenadas reales de Isla Margarita.
+--
+-- REQUISITOS: PostGIS instalado (la columna geom se calcula por trigger).
+-- USO: psql "URL" -f database/02-datos-ejemplo.sql
+-- ============================================================================
 
--- Personas
-INSERT INTO persona (documento, nombre, apellido, alias, fecha_nacimiento, rol, telefono) VALUES
-('1700000001', 'Juan',   'Pérez',    'El Rápido',  '1985-03-12', 'SOSPECHOSO',   '0991234001'),
-('1700000002', 'María',  'Gómez',    NULL,         '1990-07-22', 'VICTIMA',      '0991234002'),
-('1700000003', 'Carlos', 'Ramírez',  'Tuerca',     '1978-01-05', 'SOSPECHOSO',   '0991234003'),
-('1700000004', 'Ana',    'Torres',   NULL,         '1995-11-14', 'VICTIMA',      '0991234004'),
-('1700000005', 'Luis',   'Mendoza',  'El Puente',  '1982-06-30', 'INTERMEDIARIO','0991234005'),
-('1700000006', 'Patricia','Vargas',  NULL,         '1988-04-19', 'TESTIGO',      '0991234006'),
-('1700000007', 'Roberto','Salazar',  NULL,         '1975-09-02', 'PROPIETARIO',  '0991234007'),
-('1700000008', 'Lucía',  'Rojas',    NULL,         '1992-12-08', 'PROPIETARIO',  '0991234008'),
-('1700000009', 'Miguel', 'Castro',   'Negro',      '1987-02-15', 'SOSPECHOSO',   '0991234009'),
-('1700000010', 'Sofía',  'Núñez',    NULL,         '1998-08-21', 'VICTIMA',      '0991234010')
-ON CONFLICT (documento) DO NOTHING;
+BEGIN;
 
--- Ubicaciones (lat/lng alrededor de Miami)
-INSERT INTO ubicacion (direccion, latitud, longitud, tipo) VALUES
-('Av. Principal 123',         25.7617, -80.1918, 'COMERCIO'),
-('Taller Mecánico El Galpón', 25.7650, -80.1950, 'TALLER'),
-('Galpón zona industrial',    25.7651, -80.1955, 'GALPON'),
-('Terreno baldío sector sur', 25.7660, -80.1970, 'TERRENO_BALDIO'),
-('Cajero Banco Central',      25.7700, -80.2000, 'CAJERO'),
-('Parada Bus Central',        25.7710, -80.2010, 'TRANSPORTE_PUBLICO'),
-('Casa Juan Pérez',           25.7800, -80.2100, 'DOMICILIO'),
-('Casa Carlos Ramírez',       25.7820, -80.2150, 'DOMICILIO'),
-('Casa María Gómez',          25.7830, -80.2160, 'DOMICILIO'),
-('Restaurante La Fiesta',     25.7750, -80.2050, 'COMERCIO');
+-- Limpieza previa (respeta el orden de las claves foraneas)
+DELETE FROM suceso_testigo;
+DELETE FROM alerta;
+DELETE FROM vinculo;
+DELETE FROM suceso;
+DELETE FROM avistamiento;
+DELETE FROM relacion;
+DELETE FROM vehiculo;
+DELETE FROM foto_desaparecida;
+DELETE FROM persona_desaparecida;
+DELETE FROM persona;
+DELETE FROM ubicacion;
 
--- Vehículos
-INSERT INTO vehiculo (placa, marca, modelo, anio, color, estado, propietario_id) VALUES
-('ABC1234', 'Toyota',    'Hilux',    2020, 'Blanco', 'ROBADO',    7),
-('DEF5678', 'Chevrolet', 'D-Max',    2019, 'Negro',  'ROBADO',    8),
-('GHI9012', 'Ford',      'Ranger',   2021, 'Gris',   'ROBADO',    7),
-('JKL3456', 'Nissan',    'Frontier', 2018, 'Rojo',   'NORMAL',    8),
-('MNO7890', 'Honda',     'Civic',    2022, 'Blanco', 'NORMAL',    1),
-('PQR1111', 'Kia',       'Sportage', 2020, 'Azul',   'NORMAL',    3);
+-- ============================================================================
+-- 1. UBICACIONES (coordenadas reales de Isla Margarita)
+-- ============================================================================
+INSERT INTO ubicacion (direccion, latitud, longitud, tipo, nodo_sospechoso, creado_en) VALUES
+('Taller El Yunque, Los Robles, Pampatar',            10.9930, -63.7960, 'TALLER',            true,  now()),
+('Galpon Zona Industrial, Los Millanes, La Asuncion', 11.0290, -63.8630, 'GALPON',            true,  now()),
+('Av. Bolivar, Porlamar',                             10.9577, -63.8492, 'COMERCIO',          false, now()),
+('C.C. Sambil, Pampatar',                             10.9840, -63.8010, 'COMERCIO',          false, now()),
+('Terreno baldio, El Cardon, Porlamar',               10.9420, -63.8600, 'TERRENO_BALDIO',    true,  now()),
+('Av. 4 de Mayo, Porlamar',                           10.9610, -63.8560, 'TRANSPORTE_PUBLICO',false, now()),
+('Domicilio, Urb. Playa El Angel, Pampatar',          10.9760, -63.8180, 'DOMICILIO',         false, now()),
+('Cajero Banco, Av. Santiago Marino, Porlamar',       10.9595, -63.8470, 'CAJERO',            false, now()),
+('Playa Parguito, El Tirano',                         11.0680, -63.8090, 'OTRO',              false, now()),
+('Domicilio, Juan Griego',                            11.0810, -63.9640, 'DOMICILIO',         false, now());
 
--- Sucesos
-INSERT INTO suceso (tipo, fecha_hora, ubicacion_id, ubicacion_ultima_id, vehiculo_id, victima_id, modus_operandi, descripcion) VALUES
-('ROBO_VEHICULO',  NOW() - INTERVAL '2 hours',  1, 2, 1, 7, 'INHIBIDOR_SENAL',     'Robo en zona comercial, última señal cerca del taller'),
-('ROBO_VEHICULO',  NOW() - INTERVAL '1 hour',   1, 3, 2, 8, 'INHIBIDOR_SENAL',     'Mismo modus operandi que el caso anterior'),
-('ROBO_VEHICULO',  NOW() - INTERVAL '30 minutes', 1, 2, 3, 7, 'INHIBIDOR_SENAL',  'Tercera camioneta robada en el día'),
-('DESAPARICION',   NOW() - INTERVAL '3 days',   6, 6, NULL, 2, NULL,              'María Gómez desapareció después de tomar el bus en Parada Central'),
-('DESAPARICION',   NOW() - INTERVAL '5 days',   6, 5, NULL, 4, NULL,              'Ana Torres desapareció tras usar el cajero; última señal en transporte'),
-('AVISTAMIENTO',   NOW() - INTERVAL '1 hour 55 minutes',  2, NULL, 1, NULL, NULL, 'Cámara taller captó la camioneta'),
-('AVISTAMIENTO',   NOW() - INTERVAL '55 minutes',         3, NULL, 2, NULL, NULL, 'Cámara galpón captó la segunda camioneta'),
-('AVISTAMIENTO',   NOW() - INTERVAL '25 minutes',         2, NULL, 3, NULL, NULL, 'Cámara taller captó la tercera camioneta');
+-- ============================================================================
+-- 2. PERSONAS (victimas, sospechosos, testigos, propietarios, intermediarios)
+-- ============================================================================
+INSERT INTO persona (documento, nombre, apellido, alias, fecha_nacimiento, rol, telefono, estado, creado_en, actualizado_en) VALUES
+('V-12345678', 'Carlos',    'Rodriguez', NULL,        '1985-03-12', 'VICTIMA',       '0414-1234567', 'ACTIVO', now(), now()),
+('V-13456789', 'Maria',     'Gonzalez',  NULL,        '1990-07-25', 'VICTIMA',       '0416-2345678', 'ACTIVO', now(), now()),
+('V-14567890', 'Jose',      'Martinez',  NULL,        '1978-11-03', 'VICTIMA',       '0424-3456789', 'ACTIVO', now(), now()),
+('V-15678901', 'Ana',       'Perez',     NULL,        '1995-01-18', 'VICTIMA',       '0412-4567890', 'ACTIVO', now(), now()),
+('V-16789012', 'Luis',      'Hernandez', 'El Flaco',  '1982-09-30', 'SOSPECHOSO',    '0426-5678901', 'ACTIVO', now(), now()),
+('V-17890123', 'Pedro',     'Ramirez',   'El Chino',  '1988-05-14', 'SOSPECHOSO',    '0414-6789012', 'ACTIVO', now(), now()),
+('V-18901234', 'Miguel',    'Torres',    'El Gordo',  '1975-12-22', 'SOSPECHOSO',    '0416-7890123', 'ACTIVO', now(), now()),
+('V-19012345', 'Rosa',      'Diaz',      NULL,        '1992-04-08', 'INTERMEDIARIO', '0424-8901234', 'ACTIVO', now(), now()),
+('V-20123456', 'Juana',     'Fernandez', NULL,        '1986-08-19', 'TESTIGO',       '0412-9012345', 'ACTIVO', now(), now()),
+('V-21234567', 'Francisco', 'Moreno',    NULL,        '1970-02-27', 'TESTIGO',       '0426-0123456', 'ACTIVO', now(), now()),
+('V-22345678', 'Elena',     'Jimenez',   NULL,        '1998-06-11', 'PROPIETARIO',   '0414-1122334', 'ACTIVO', now(), now()),
+('V-23456789', 'Roberto',   'Ruiz',      NULL,        '1983-10-05', 'PROPIETARIO',   '0416-2233445', 'ACTIVO', now(), now());
 
--- Relaciones sociales (para el caso del intermediario)
--- Víctima María (2) conoce a Luis (5) por contacto telefónico
--- Luis (5) conoce a Juan Pérez (1) - sospechoso - como amigo
--- Por tanto: María → Luis → Juan (Luis es el intermediario)
-INSERT INTO relacion (persona_a_id, persona_b_id, tipo_relacion, peso) VALUES
-(2, 5, 'CONTACTO_TELEFONICO', 3),
-(5, 2, 'CONTACTO_TELEFONICO', 3),
-(5, 1, 'AMIGO',              5),
-(1, 5, 'AMIGO',              5),
-(4, 5, 'LABORAL',            2),
-(5, 4, 'LABORAL',            2),
-(3, 9, 'FAMILIAR',           5),
-(9, 3, 'FAMILIAR',           5),
-(6, 2, 'AMIGO',              2),
-(2, 6, 'AMIGO',              2);
+-- ============================================================================
+-- 3. VEHICULOS (varios robados; algunos de apoyo para escolta)
+-- ============================================================================
+INSERT INTO vehiculo (placa, marca, modelo, anio, color, estado, propietario_id, chasis, declaracion, creado_en) VALUES
+('AB123CD', 'Toyota',    'Corolla',  2019, 'Gris',   'ROBADO',         (SELECT id FROM persona WHERE documento='V-12345678'), 'CH0001AAA', 'Robado a mano armada.', now()),
+('EF456GH', 'Chevrolet', 'Aveo',     2018, 'Blanco', 'ROBADO',         (SELECT id FROM persona WHERE documento='V-13456789'), 'CH0002BBB', 'Sustraido del estacionamiento.', now()),
+('IJ789KL', 'Ford',      'Fiesta',   2020, 'Rojo',   'ROBADO',         (SELECT id FROM persona WHERE documento='V-14567890'), 'CH0003CCC', 'Robo con violencia.', now()),
+('MN012OP', 'Hyundai',   'Accent',   2017, 'Negro',  'ROBADO',         (SELECT id FROM persona WHERE documento='V-15678901'), 'CH0004DDD', 'Interceptado en la via.', now()),
+('QR345ST', 'Jeep',      'Cherokee', 2015, 'Verde',  'VEHICULO_APOYO', (SELECT id FROM persona WHERE documento='V-22345678'), 'CH0005EEE', 'Visto acompanando robos.', now()),
+('UV678WX', 'Toyota',    'Hilux',    2016, 'Plata',  'VEHICULO_APOYO', (SELECT id FROM persona WHERE documento='V-23456789'), 'CH0006FFF', 'Vehiculo escolta sospechoso.', now()),
+('YZ901AB', 'Chevrolet', 'Optra',    2014, 'Azul',   'RECUPERADO',     (SELECT id FROM persona WHERE documento='V-22345678'), 'CH0007GGG', 'Recuperado tras operativo.', now());
 
--- Avistamientos (para detectar vehículo escolta)
--- El sedán MNO7890 aparece cerca de los vehículos robados antes de cada robo
-INSERT INTO avistamiento (vehiculo_id, ubicacion_id, fecha_hora, fuente) VALUES
-(1, 1, NOW() - INTERVAL '2 hours 15 minutes', 'CAMARA_1'),
-(5, 1, NOW() - INTERVAL '2 hours 14 minutes', 'CAMARA_1'),
-(2, 1, NOW() - INTERVAL '1 hour 15 minutes',  'CAMARA_1'),
-(5, 1, NOW() - INTERVAL '1 hour 14 minutes',  'CAMARA_1'),
-(3, 1, NOW() - INTERVAL '45 minutes',         'CAMARA_1'),
-(5, 1, NOW() - INTERVAL '44 minutes',         'CAMARA_1');
+-- ============================================================================
+-- 4. RELACIONES SOCIALES (para la regla de intermediario / circulo de confianza)
+-- ============================================================================
+INSERT INTO relacion (persona_a_id, persona_b_id, tipo_relacion, peso, creado_en) VALUES
+((SELECT id FROM persona WHERE documento='V-12345678'), (SELECT id FROM persona WHERE documento='V-19012345'), 'AMIGO',   2, now()),
+((SELECT id FROM persona WHERE documento='V-19012345'), (SELECT id FROM persona WHERE documento='V-16789012'), 'CONTACTO_TELEFONICO', 3, now()),
+((SELECT id FROM persona WHERE documento='V-13456789'), (SELECT id FROM persona WHERE documento='V-19012345'), 'FAMILIAR', 2, now()),
+((SELECT id FROM persona WHERE documento='V-19012345'), (SELECT id FROM persona WHERE documento='V-17890123'), 'LABORAL',  2, now()),
+((SELECT id FROM persona WHERE documento='V-16789012'), (SELECT id FROM persona WHERE documento='V-17890123'), 'AMIGO',   4, now()),
+((SELECT id FROM persona WHERE documento='V-17890123'), (SELECT id FROM persona WHERE documento='V-18901234'), 'AMIGO',   4, now());
 
--- =====================================================================
--- Verificación
--- =====================================================================
--- SELECT COUNT(*) AS personas     FROM persona;
--- SELECT COUNT(*) AS vehiculos    FROM vehiculo;
--- SELECT COUNT(*) AS ubicaciones  FROM ubicacion;
--- SELECT COUNT(*) AS sucesos      FROM suceso;
--- SELECT COUNT(*) AS relaciones   FROM relacion;
--- SELECT COUNT(*) AS avistamientos FROM avistamiento;
+-- ============================================================================
+-- 5. SUCESOS (15 en total)
+-- ============================================================================
+-- Bloque A: 4 ROBOS cerca del Taller El Yunque (NODO LOGISTICO + MODUS)
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, vehiculo_id, victima_id, creado_en) VALUES
+('ROBO_VEHICULO', '2026-07-10 08:15:00', 'Robo a mano armada de un Toyota Corolla gris.',    'ROBO_ARMADO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='AB123CD'),
+   (SELECT id FROM persona   WHERE documento='V-12345678'), now()),
+('ROBO_VEHICULO', '2026-07-10 09:40:00', 'Sustraccion de un Chevrolet Aveo blanco.',         'ROBO_ARMADO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='EF456GH'),
+   (SELECT id FROM persona   WHERE documento='V-13456789'), now()),
+('ROBO_VEHICULO', '2026-07-10 11:20:00', 'Robo con violencia de un Ford Fiesta rojo.',       'ROBO_ARMADO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='IJ789KL'),
+   (SELECT id FROM persona   WHERE documento='V-14567890'), now()),
+('ROBO_VEHICULO', '2026-07-10 13:05:00', 'Interceptacion y robo de un Hyundai Accent negro.','ROBO_ARMADO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='MN012OP'),
+   (SELECT id FROM persona   WHERE documento='V-15678901'), now());
+
+-- Bloque B: 3 AVISTAMIENTOS del vehiculo de apoyo (VEHICULO ESCOLTA)
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, vehiculo_id, creado_en) VALUES
+('AVISTAMIENTO', '2026-07-10 08:20:00', 'Jeep Cherokee verde escoltando la salida del robo.', 'ESCOLTA',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='QR345ST'), now()),
+('AVISTAMIENTO', '2026-07-10 09:45:00', 'Mismo Jeep Cherokee verde en segundo robo.',         'ESCOLTA',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='QR345ST'), now()),
+('AVISTAMIENTO', '2026-07-10 11:25:00', 'Toyota Hilux plata acompanando la huida.',           'ESCOLTA',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Taller El Yunque%'),
+   (SELECT id FROM vehiculo  WHERE placa='UV678WX'), now());
+
+-- Bloque C: 2 TRANSACCIONES sospechosas en el galpon (desguace)
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, creado_en) VALUES
+('TRANSACCION', '2026-07-11 15:00:00', 'Movimiento de repuestos sospechoso en el galpon.', 'DESGUACE',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Galpon%'), now()),
+('TRANSACCION', '2026-07-11 18:30:00', 'Venta de piezas sin factura en el galpon.',         'DESGUACE',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Galpon%'), now());
+
+-- Bloque D: 3 DESAPARICIONES en zona cercana (CLUSTER)
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, victima_id, creado_en) VALUES
+('DESAPARICION', '2026-07-12 20:00:00', 'Persona vista por ultima vez cerca del terreno baldio.', 'RAPTO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Terreno baldio%'),
+   (SELECT id FROM persona   WHERE documento='V-15678901'), now()),
+('DESAPARICION', '2026-07-13 21:30:00', 'Desaparicion reportada cerca del mismo sector.',          'RAPTO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Terreno baldio%'),
+   (SELECT id FROM persona   WHERE documento='V-14567890'), now()),
+('DESAPARICION', '2026-07-14 19:15:00', 'Tercer caso en la zona de El Cardon.',                    'RAPTO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Terreno baldio%'),
+   (SELECT id FROM persona   WHERE documento='V-13456789'), now());
+
+-- Bloque E: 3 sucesos normales dispersos (control)
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, vehiculo_id, victima_id, creado_en) VALUES
+('ROBO_VEHICULO', '2026-06-28 10:00:00', 'Robo aislado en Juan Griego, sin conexion aparente.', 'HURTO_SIMPLE',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Domicilio, Juan Griego%'),
+   (SELECT id FROM vehiculo  WHERE placa='YZ901AB'),
+   (SELECT id FROM persona   WHERE documento='V-22345678'), now());
+INSERT INTO suceso (tipo, fecha_hora, descripcion, modus_operandi, ubicacion_id, creado_en) VALUES
+('AVISTAMIENTO', '2026-06-30 16:45:00', 'Avistamiento rutinario en la playa, sin relevancia.', 'RUTINARIO',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Playa Parguito%'), now()),
+('TRANSACCION', '2026-07-01 12:00:00', 'Transaccion legitima registrada en comercio.', 'LEGITIMA',
+   (SELECT id FROM ubicacion WHERE direccion LIKE 'Av. Bolivar%'), now());
+
+-- ============================================================================
+-- 6. TESTIGOS de algunos sucesos
+-- ============================================================================
+INSERT INTO suceso_testigo (suceso_id, persona_id) VALUES
+((SELECT id FROM suceso WHERE descripcion LIKE 'Robo a mano armada de un Toyota%' LIMIT 1),
+ (SELECT id FROM persona WHERE documento='V-20123456')),
+((SELECT id FROM suceso WHERE descripcion LIKE 'Robo a mano armada de un Toyota%' LIMIT 1),
+ (SELECT id FROM persona WHERE documento='V-21234567')),
+((SELECT id FROM suceso WHERE descripcion LIKE 'Robo con violencia de un Ford%' LIMIT 1),
+ (SELECT id FROM persona WHERE documento='V-20123456'));
+
+COMMIT;
